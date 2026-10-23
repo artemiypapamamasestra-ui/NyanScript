@@ -1,5 +1,5 @@
 --[[
-    [FPS] Flick — NYAN SCRIPT (FOV Edition)
+    [FPS] Flick — NYAN SCRIPT (FOV + Custom Sky)
     Автор: jeffkiller231451
     Главный кодер: Fox
     Моральная поддержка: liloxa58
@@ -9,10 +9,10 @@
 local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
 
 local Window = Rayfield:CreateWindow({
-    Name = "Nyan Script | FOV",
+    Name = "Nyan Script | Sky",
     LoadingTitle = "Nyan Script",
     LoadingSubtitle = "by jeffkiller231451 & Fox",
-    ConfigurationSaving = { Enabled = true, FolderName = "NyanFOV", FileName = "cfg" },
+    ConfigurationSaving = { Enabled = true, FolderName = "NyanSky", FileName = "cfg" },
     KeySystem = false,
 })
 
@@ -20,6 +20,7 @@ local CombatTab = Window:CreateTab("Combat", nil)
 local VisualsTab = Window:CreateTab("Visuals", nil)
 local ESPTab = Window:CreateTab("ESP", nil)
 local ColorTab = Window:CreateTab("Colors", nil)
+local SkyTab = Window:CreateTab("Sky Box", nil) -- НОВАЯ ВКЛАДКА
 local InfoTab = Window:CreateTab("Info", nil)
 
 local State = {
@@ -29,9 +30,8 @@ local State = {
     MaxDistance = 150,
     WalkSpeed = 16,
     
-    -- НОВОЕ: Настройки камеры
     CustomFOV = false,
-    FOVValue = 70, -- Стандартный FOV в Roblox (обычно 70)
+    FOVValue = 70,
     
     ESP = false,
     ESP_Box = true,
@@ -42,6 +42,12 @@ local State = {
     
     Crosshair = true,
     ShowFOV = true,
+    
+    -- НАСТРОЙКИ НЕБА
+    SkyEnabled = false,
+    SkyColor = {255, 255, 255}, -- Белый по умолчанию
+    SkyBrightness = 2,
+    SkyAmbient = {100, 100, 100},
     
     Color_Box = {255, 255, 255},
     Color_Skeleton = {255, 255, 255},
@@ -54,6 +60,7 @@ local RunService = game:GetService("RunService")
 local LocalPlayer = Players.LocalPlayer
 local Camera = workspace.CurrentCamera
 local RenderStepped = RunService.RenderStepped
+local Lighting = game:GetService("Lighting")
 
 -- ==== ВОДЯНОЙ ЗНАК ====
 local watermark = Drawing.new("Text")
@@ -63,6 +70,21 @@ watermark.Color = Color3.fromRGB(255, 50, 50)
 watermark.Outline = true
 watermark.Position = Vector2.new(15, 15)
 watermark.Visible = true
+
+-- ==== ЛОГИКА НЕБА ====
+local CustomSky = Instance.new("Sky")
+CustomSky.Parent = Lighting
+CustomSky.Name = "NyanSkybox"
+
+-- Дефолтные текстуры неба Roblox (чтобы не было черного экрана, если не поставим свои)
+local defaultSkyTextures = {
+    SkyboxBk = "rbxassetid://159454299",
+    SkyboxDn = "rbxassetid://159454296",
+    SkyboxFt = "rbxassetid://159454293",
+    SkyboxLf = "rbxassetid://159454286",
+    SkyboxRt = "rbxassetid://159454300",
+    SkyboxUp = "rbxassetid://159454288"
+}
 
 -- ==== ПОИСК ЦЕЛИ ====
 local function getClosestPlayer()
@@ -94,7 +116,7 @@ local function getClosestPlayer()
     return closest
 end
 
--- ==== ПРОВЕРКА СТЕН (WALLCHECK) ====
+-- ==== ПРОВЕРКА СТЕН ====
 local function isVisible(target)
     if not target then return false end
     local camPos = Camera.CFrame.Position
@@ -140,10 +162,36 @@ end)
 -- ==== FOV CHANGER ====
 RenderStepped:Connect(function()
     if State.CustomFOV then
-        -- Если включен кастомный FOV, ставим наше значение
         if Camera.FieldOfView ~= State.FOVValue then
             Camera.FieldOfView = State.FOVValue
         end
+    end
+end)
+
+-- ==== ОБНОВЛЕНИЕ НЕБА ====
+RenderStepped:Connect(function()
+    if State.SkyEnabled then
+        -- Красим Ambient (освещение) и Brightness
+        Lighting.Brightness = State.SkyBrightness
+        Lighting.Ambient = Color3.fromRGB(State.SkyAmbient[1], State.SkyAmbient[2], State.SkyAmbient[3])
+        
+        -- Красим текстуры неба (через цвет)
+        -- В Roblox напрямую цвет скайбокса не поменять, но можно поставить фильтр (ColorCorrection)
+        -- Мы используем трюк: меняем ColorCorrection, чтобы небо стало нужного цвета
+        local cc = Lighting:FindFirstChild("NyanColorCorrection")
+        if not cc then
+            cc = Instance.new("ColorCorrectionEffect")
+            cc.Name = "NyanColorCorrection"
+            cc.Parent = Lighting
+        end
+        cc.TintColor = Color3.fromRGB(State.SkyColor[1], State.SkyColor[2], State.SkyColor[3])
+        cc.Enabled = true
+    else
+        -- Выключаем кастомное небо (возвращаем как было)
+        local cc = Lighting:FindFirstChild("NyanColorCorrection")
+        if cc then cc.Enabled = false end
+        Lighting.Brightness = 2
+        Lighting.Ambient = Color3.fromRGB(0, 0, 0)
     end
 end)
 
@@ -320,16 +368,11 @@ CombatTab:CreateToggle({ Name = "TriggerBot (Стрельба)", CurrentValue = 
 CombatTab:CreateSlider({ Name = "Aim FOV", Range = {50, 800}, Increment = 10, Suffix = " px", CurrentValue = 250, Flag = "FOV", Callback = function(v) State.FOV = v end })
 CombatTab:CreateSlider({ Name = "Max Distance", Range = {10, 1000}, Increment = 10, Suffix = " m", CurrentValue = 150, Flag = "MaxDist", Callback = function(v) State.MaxDistance = v end })
 
--- НОВЫЙ БЛОК: НАСТРОЙКИ КАМЕРЫ (FOV)
-VisualsTab:CreateToggle({ Name = "Custom FOV (Изменить обзор)", CurrentValue = false, Flag = "CustomFOV", Callback = function(v) State.CustomFOV = v end })
+VisualsTab:CreateToggle({ Name = "Custom FOV", CurrentValue = false, Flag = "CustomFOV", Callback = function(v) State.CustomFOV = v end })
 VisualsTab:CreateSlider({ Name = "FOV Value", Range = {40, 120}, Increment = 1, CurrentValue = 70, Flag = "FOVVal", Callback = function(v) 
     State.FOVValue = v 
-    -- Если тумблер включен, применяем сразу
-    if State.CustomFOV then
-        Camera.FieldOfView = v
-    end
+    if State.CustomFOV then Camera.FieldOfView = v end
 end })
-
 VisualsTab:CreateToggle({ Name = "Crosshair", CurrentValue = true, Flag = "Crosshair", Callback = function(v) State.Crosshair = v end })
 VisualsTab:CreateToggle({ Name = "Show FOV Circle", CurrentValue = true, Flag = "ShowFOV", Callback = function(v) State.ShowFOV = v end })
 VisualsTab:CreateSlider({ Name = "WalkSpeed", Range = {16, 100}, Increment = 1, Suffix = " studs", CurrentValue = 16, Flag = "WS", Callback = function(v) State.WalkSpeed = v end })
@@ -344,18 +387,22 @@ ESPTab:CreateToggle({ Name = "Tracers", CurrentValue = true, Flag = "ESP_Tracer"
 ColorTab:CreateSlider({ Name = "Box R", Range = {0, 255}, Increment = 1, CurrentValue = 255, Flag = "BoxR", Callback = function(v) State.Color_Box[1] = v end })
 ColorTab:CreateSlider({ Name = "Box G", Range = {0, 255}, Increment = 1, CurrentValue = 255, Flag = "BoxG", Callback = function(v) State.Color_Box[2] = v end })
 ColorTab:CreateSlider({ Name = "Box B", Range = {0, 255}, Increment = 1, CurrentValue = 255, Flag = "BoxB", Callback = function(v) State.Color_Box[3] = v end })
-
 ColorTab:CreateSlider({ Name = "Skeleton R", Range = {0, 255}, Increment = 1, CurrentValue = 255, Flag = "SkelR", Callback = function(v) State.Color_Skeleton[1] = v end })
 ColorTab:CreateSlider({ Name = "Skeleton G", Range = {0, 255}, Increment = 1, CurrentValue = 255, Flag = "SkelG", Callback = function(v) State.Color_Skeleton[2] = v end })
 ColorTab:CreateSlider({ Name = "Skeleton B", Range = {0, 255}, Increment = 1, CurrentValue = 255, Flag = "SkelB", Callback = function(v) State.Color_Skeleton[3] = v end })
-
 ColorTab:CreateSlider({ Name = "Tracer R", Range = {0, 255}, Increment = 1, CurrentValue = 255, Flag = "TracerR", Callback = function(v) State.Color_Tracer[1] = v end })
 ColorTab:CreateSlider({ Name = "Tracer G", Range = {0, 255}, Increment = 1, CurrentValue = 0, Flag = "TracerG", Callback = function(v) State.Color_Tracer[2] = v end })
 ColorTab:CreateSlider({ Name = "Tracer B", Range = {0, 255}, Increment = 1, CurrentValue = 0, Flag = "TracerB", Callback = function(v) State.Color_Tracer[3] = v end })
-
 ColorTab:CreateSlider({ Name = "FOV Circle R", Range = {0, 255}, Increment = 1, CurrentValue = 255, Flag = "FovR", Callback = function(v) State.Color_FOV[1] = v end })
 ColorTab:CreateSlider({ Name = "FOV Circle G", Range = {0, 255}, Increment = 1, CurrentValue = 255, Flag = "FovG", Callback = function(v) State.Color_FOV[2] = v end })
 ColorTab:CreateSlider({ Name = "FOV Circle B", Range = {0, 255}, Increment = 1, CurrentValue = 255, Flag = "FovB", Callback = function(v) State.Color_FOV[3] = v end })
+
+-- НОВАЯ ВКЛАДКА: НЕБО (SKY)
+SkyTab:CreateToggle({ Name = "Custom Sky (Троллинг)", CurrentValue = false, Flag = "SkyEnabled", Callback = function(v) State.SkyEnabled = v end })
+SkyTab:CreateSlider({ Name = "Sky R", Range = {0, 255}, Increment = 1, CurrentValue = 255, Flag = "SkyR", Callback = function(v) State.SkyColor[1] = v end })
+SkyTab:CreateSlider({ Name = "Sky G", Range = {0, 255}, Increment = 1, CurrentValue = 255, Flag = "SkyG", Callback = function(v) State.SkyColor[2] = v end })
+SkyTab:CreateSlider({ Name = "Sky B", Range = {0, 255}, Increment = 1, CurrentValue = 255, Flag = "SkyB", Callback = function(v) State.SkyColor[3] = v end })
+SkyTab:CreateSlider({ Name = "Brightness (Яркость)", Range = {0, 5}, Increment = 0.1, CurrentValue = 2, Flag = "SkyBr", Callback = function(v) State.SkyBrightness = v end })
 
 InfoTab:CreateParagraph({
     Title = "Информация", 
@@ -374,4 +421,4 @@ RunService.Heartbeat:Connect(function()
     if char and char:FindFirstChild("Humanoid") then char.Humanoid.WalkSpeed = State.WalkSpeed end
 end)
 
-Rayfield:Notify({ Title = "Nyan Script", Content = "by jeffkiller231451 | TG: @hatanyana", Duration = 5 })
+Rayfield:Notify({ Title = "Nyan Script", Content = "by jeffkiller231451 | Sky Box added!", Duration = 5 })
