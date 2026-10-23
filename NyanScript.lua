@@ -1,9 +1,8 @@
 --[[
-    [FPS] Flick — NYAN SCRIPT (Mobile Clean)
+    [FPS] Flick — NYAN SCRIPT (Fixed Ghost ESP)
     Автор: jeffkiller231451
     Главный кодер: Fox
     Моральная поддержка: liloxa58
-    Telegram: https://t.me/hatanyana
 ]]
 
 local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
@@ -19,12 +18,12 @@ local Window = Rayfield:CreateWindow({
 local CombatTab = Window:CreateTab("Combat", nil)
 local VisualsTab = Window:CreateTab("Visuals", nil)
 local ESPTab = Window:CreateTab("ESP", nil)
-local ColorTab = Window:CreateTab("Colors", nil)
 local InfoTab = Window:CreateTab("Info", nil)
 
 local State = {
     AimBot = false,
     TriggerBot = false,
+    TriggerDelay = 0.1,
     FOV = 250,
     MaxDistance = 150,
     WalkSpeed = 16,
@@ -40,16 +39,7 @@ local State = {
     ESP_Tracer = true,
     
     Crosshair = true,
-    ShowFOV = true,
-    
-    ParticlesEnabled = false,
-    ParticleType = "Fire",
-    ParticleSpeed = 1,
-    
-    Color_Box = {255, 255, 255},
-    Color_Skeleton = {255, 255, 255},
-    Color_Tracer = {255, 0, 0},
-    Color_FOV = {255, 255, 255},
+    ShowFOV = false,
 }
 
 local Players = game:GetService("Players")
@@ -67,45 +57,6 @@ watermark.Outline = true
 watermark.Position = Vector2.new(15, 15)
 watermark.Visible = true
 
--- ==== ПАРТИКЛЫ (ЭМИТТЕРЫ) ====
-local ParticleEmitter = Instance.new("ParticleEmitter")
-ParticleEmitter.Name = "NyanParticles"
-ParticleEmitter.Enabled = false
-ParticleEmitter.Rate = 50
-ParticleEmitter.Lifetime = NumberRange.new(1, 2)
-ParticleEmitter.Speed = NumberRange.new(5, 10)
-ParticleEmitter.SpreadAngle = Vector2.new(180, 180)
-ParticleEmitter.RotSpeed = NumberRange.new(-90, 90)
-ParticleEmitter.LightEmission = 0.5
-ParticleEmitter.LightInfluence = 0
-ParticleEmitter.Size = NumberSequence.new(1)
-
-local Textures = {
-    ["Fire"] = "rbxassetid://243660364",
-    ["Sparkles"] = "rbxassetid://3945490826",
-    ["Snow"] = "rbxassetid://5028857472",
-    ["Smoke"] = "rbxassetid://243660364" 
-}
-
-local function updateParticles(type)
-    ParticleEmitter.Texture = Textures[type] or Textures["Fire"]
-    if type == "Fire" then
-        ParticleEmitter.Color = ColorSequence.new(Color3.fromRGB(255, 100, 0), Color3.fromRGB(255, 0, 0))
-        ParticleEmitter.Size = NumberSequence.new(2)
-    elseif type == "Sparkles" then
-        ParticleEmitter.Color = ColorSequence.new(Color3.fromRGB(255, 255, 0), Color3.fromRGB(255, 215, 0))
-        ParticleEmitter.Size = NumberSequence.new(1)
-    elseif type == "Snow" then
-        ParticleEmitter.Color = ColorSequence.new(Color3.fromRGB(255, 255, 255))
-        ParticleEmitter.Speed = NumberRange.new(2, 5)
-        ParticleEmitter.Size = NumberSequence.new(1)
-    elseif type == "Smoke" then
-        ParticleEmitter.Color = ColorSequence.new(Color3.fromRGB(50, 50, 50), Color3.fromRGB(100, 100, 100))
-        ParticleEmitter.Size = NumberSequence.new(5)
-        ParticleEmitter.Speed = NumberRange.new(1, 3)
-    end
-end
-
 -- ==== ПОИСК ЦЕЛИ ====
 local function getClosestPlayer()
     local closest = nil
@@ -114,7 +65,7 @@ local function getClosestPlayer()
     local camPos = Camera.CFrame.Position
 
     for _, p in ipairs(Players:GetPlayers()) do
-        if p ~= LocalPlayer and p.Character and p.Character:FindFirstChild("Head") then
+        if p ~= LocalPlayer and p.Parent and p.Character and p.Character:FindFirstChild("Head") then
             local char = p.Character
             local hum = char:FindFirstChild("Humanoid")
             if not hum or hum.Health <= 0 then continue end
@@ -141,7 +92,7 @@ local function isVisible(target)
     if not target then return false end
     local camPos = Camera.CFrame.Position
     local rayParams = RaycastParams.new()
-    rayParams.FilterDescendantsInstances = {LocalPlayer.Character, ParticleEmitter}
+    rayParams.FilterDescendantsInstances = {LocalPlayer.Character}
     rayParams.FilterType = Enum.RaycastFilterType.Exclude
     
     local dir = (target.Position - camPos)
@@ -154,6 +105,8 @@ local function isVisible(target)
 end
 
 -- ==== АИМБОТ И ТРИГГЕР ====
+local lastTriggerTime = 0
+
 RenderStepped:Connect(function()
     if not State.AimBot and not State.TriggerBot then return end
     local target = getClosestPlayer()
@@ -169,19 +122,15 @@ RenderStepped:Connect(function()
     
     if State.TriggerBot then
         if isVisible(target) then
-            if mouse1click then mouse1click() end
+            if tick() - lastTriggerTime >= State.TriggerDelay then
+                if mouse1click then mouse1click() end
+                lastTriggerTime = tick()
+            end
         end
     end
 end)
 
--- ==== FOV CHANGER ====
-RenderStepped:Connect(function()
-    if State.CustomFOV then
-        Camera.FieldOfView = State.FOVValue
-    end
-end)
-
--- ==== ПРИЦЕЛ И FOV ====
+-- ==== ПРИЦЕЛ ====
 local crosshairDot = Drawing.new("Circle")
 crosshairDot.Thickness = 2
 crosshairDot.Radius = 3
@@ -196,17 +145,22 @@ fovCircle.Visible = false
 RenderStepped:Connect(function()
     local center = Camera.ViewportSize / 2
     crosshairDot.Color = Color3.fromRGB(255, 50, 50)
-    fovCircle.Color = Color3.fromRGB(State.Color_FOV[1], State.Color_FOV[2], State.Color_FOV[3])
     if State.Crosshair then
         crosshairDot.Position = center; crosshairDot.Visible = true
-        fovCircle.Position = center; fovCircle.Radius = State.FOV; fovCircle.Visible = State.ShowFOV
     else
-        crosshairDot.Visible = false; fovCircle.Visible = false
+        crosshairDot.Visible = false
+    end
+
+    if State.ShowFOV then
+        fovCircle.Position = center; fovCircle.Radius = State.FOV; fovCircle.Visible = true
+    else
+        fovCircle.Visible = false
     end
 end)
 
 -- ==== ESP ====
 local espCache = {}
+
 local function createESP(player)
     if espCache[player] then return end
     local d = {
@@ -227,26 +181,50 @@ local function hideESP(d)
     for _, line in pairs(d.skeleton) do line.Visible = false end
 end
 
+local function removeESP(player)
+    if espCache[player] then
+        local d = espCache[player]
+        d.box:Remove(); d.health:Remove(); d.healthBg:Remove(); d.name:Remove(); d.tracer:Remove()
+        for _, line in pairs(d.skeleton) do line:Remove() end
+        espCache[player] = nil
+    end
+end
+
+-- Удаляем ESP, когда игрок выходит из игры
+Players.PlayerRemoving:Connect(function(player)
+    removeESP(player)
+end)
+
 RenderStepped:Connect(function()
     for _, p in ipairs(Players:GetPlayers()) do
         if p ~= LocalPlayer then
             if not espCache[p] then createESP(p) end
             local d = espCache[p]
-            if not State.ESP or not p.Character or not p.Character:FindFirstChild("HumanoidRootPart") then hideESP(d) continue end
+            
+            -- ЖЁСТКАЯ ПРОВЕРКА: Игрок в игре? Живой? Есть персонаж?
+            if not State.ESP or not p.Parent or not p.Character or not p.Character:FindFirstChild("HumanoidRootPart") then 
+                hideESP(d) 
+                continue 
+            end
+            
             local char = p.Character; local hum = char:FindFirstChild("Humanoid"); local root = char.HumanoidRootPart
-            if not hum or hum.Health <= 0 then hideESP(d) continue end
+            
+            if not hum or hum.Health <= 0 then 
+                hideESP(d) 
+                continue 
+            end
+
+            -- Проверка, что голова и корень двигаются (а не просто в памяти висят)
+            if not root.Position or root.Position.Magnitude == 0 then
+                hideESP(d)
+                continue
+            end
+            
             local screenPos, onScreen = Camera:WorldToViewportPoint(root.Position)
             if onScreen then
                 local dist = (Camera.CFrame.Position - root.Position).Magnitude
                 local boxSize = Vector2.new(2000 / dist, 3000 / dist)
                 local boxPos = Vector2.new(screenPos.X - boxSize.X / 2, screenPos.Y - boxSize.Y / 2)
-                
-                local cBox = Color3.fromRGB(State.Color_Box[1], State.Color_Box[2], State.Color_Box[3])
-                local cSkel = Color3.fromRGB(State.Color_Skeleton[1], State.Color_Skeleton[2], State.Color_Skeleton[3])
-                local cTracer = Color3.fromRGB(State.Color_Tracer[1], State.Color_Tracer[2], State.Color_Tracer[3])
-                
-                d.box.Color = cBox; d.tracer.Color = cTracer
-                for _, line in pairs(d.skeleton) do line.Color = cSkel end
                 
                 if State.ESP_Box then d.box.Size = boxSize; d.box.Position = boxPos; d.box.Visible = true else d.box.Visible = false end
                 if State.ESP_Name then d.name.Text = p.Name .. " [" .. math.floor(dist) .. "m]"; d.name.Position = Vector2.new(screenPos.X, boxPos.Y - 18); d.name.Visible = true else d.name.Visible = false end
@@ -271,38 +249,18 @@ RenderStepped:Connect(function()
     end
 end)
 
--- ==== UI БЕЗ КНОПКИ ====
+-- ==== UI ====
 CombatTab:CreateToggle({ Name = "AimBot", CurrentValue = false, Flag = "AimBot", Callback = function(v) State.AimBot = v end })
-CombatTab:CreateToggle({ Name = "TriggerBot (WallCheck)", CurrentValue = false, Flag = "TriggerBot", Callback = function(v) State.TriggerBot = v end })
+CombatTab:CreateToggle({ Name = "TriggerBot", CurrentValue = false, Flag = "TriggerBot", Callback = function(v) State.TriggerBot = v end })
+CombatTab:CreateSlider({ Name = "Trigger Delay", Range = {0.01, 1}, Increment = 0.01, Suffix = " sec", CurrentValue = 0.1, Flag = "TrigDelay", Callback = function(v) State.TriggerDelay = v end })
 CombatTab:CreateSlider({ Name = "Aim FOV", Range = {50, 800}, Increment = 10, Suffix = " px", CurrentValue = 250, Flag = "FOV", Callback = function(v) State.FOV = v end })
 CombatTab:CreateSlider({ Name = "Max Distance", Range = {10, 1000}, Increment = 10, Suffix = " m", CurrentValue = 150, Flag = "MaxDist", Callback = function(v) State.MaxDistance = v end })
 
 VisualsTab:CreateToggle({ Name = "Custom FOV", CurrentValue = false, Flag = "CustomFOV", Callback = function(v) State.CustomFOV = v end })
 VisualsTab:CreateSlider({ Name = "FOV Value", Range = {40, 120}, Increment = 1, CurrentValue = 70, Flag = "FOVVal", Callback = function(v) State.FOVValue = v end })
 VisualsTab:CreateToggle({ Name = "Crosshair", CurrentValue = true, Flag = "Crosshair", Callback = function(v) State.Crosshair = v end })
-VisualsTab:CreateToggle({ Name = "Show FOV Circle", CurrentValue = true, Flag = "ShowFOV", Callback = function(v) State.ShowFOV = v end })
+VisualsTab:CreateToggle({ Name = "Show FOV Circle", CurrentValue = false, Flag = "ShowFOV", Callback = function(v) State.ShowFOV = v end })
 VisualsTab:CreateSlider({ Name = "WalkSpeed", Range = {16, 100}, Increment = 1, Suffix = " studs", CurrentValue = 16, Flag = "WS", Callback = function(v) State.WalkSpeed = v end })
-
-VisualsTab:CreateToggle({ Name = "World Particles", CurrentValue = false, Flag = "Particles", Callback = function(v) 
-    State.ParticlesEnabled = v
-    ParticleEmitter.Enabled = v
-    if v then
-        local char = LocalPlayer.Character
-        if char and char:FindFirstChild("HumanoidRootPart") then
-            ParticleEmitter.Parent = char.HumanoidRootPart
-        end
-    else
-        ParticleEmitter.Parent = nil
-    end
-end })
-VisualsTab:CreateDropdown({ Name = "Particle Type", Options = {"Fire", "Sparkles", "Snow", "Smoke"}, CurrentOption = {"Fire"}, Flag = "PType", Callback = function(opt) 
-    State.ParticleType = opt[1]
-    updateParticles(State.ParticleType)
-end })
-VisualsTab:CreateSlider({ Name = "Particle Speed", Range = {0.1, 5}, Increment = 0.1, CurrentValue = 1, Flag = "PSpeed", Callback = function(v) 
-    State.ParticleSpeed = v
-    ParticleEmitter.Speed = NumberRange.new(v, v * 2)
-end })
 
 ESPTab:CreateToggle({ Name = "ESP", CurrentValue = false, Flag = "ESP", Callback = function(v) State.ESP = v end })
 ESPTab:CreateToggle({ Name = "Box", CurrentValue = true, Flag = "ESP_Box", Callback = function(v) State.ESP_Box = v end })
@@ -311,31 +269,12 @@ ESPTab:CreateToggle({ Name = "Health", CurrentValue = true, Flag = "ESP_Health",
 ESPTab:CreateToggle({ Name = "Name", CurrentValue = true, Flag = "ESP_Name", Callback = function(v) State.ESP_Name = v end })
 ESPTab:CreateToggle({ Name = "Tracers", CurrentValue = true, Flag = "ESP_Tracer", Callback = function(v) State.ESP_Tracer = v end })
 
-ColorTab:CreateSlider({ Name = "Box R", Range = {0, 255}, Increment = 1, CurrentValue = 255, Flag = "BoxR", Callback = function(v) State.Color_Box[1] = v end })
-ColorTab:CreateSlider({ Name = "Box G", Range = {0, 255}, Increment = 1, CurrentValue = 255, Flag = "BoxG", Callback = function(v) State.Color_Box[2] = v end })
-ColorTab:CreateSlider({ Name = "Box B", Range = {0, 255}, Increment = 1, CurrentValue = 255, Flag = "BoxB", Callback = function(v) State.Color_Box[3] = v end })
-ColorTab:CreateSlider({ Name = "Skeleton R", Range = {0, 255}, Increment = 1, CurrentValue = 255, Flag = "SkelR", Callback = function(v) State.Color_Skeleton[1] = v end })
-ColorTab:CreateSlider({ Name = "Skeleton G", Range = {0, 255}, Increment = 1, CurrentValue = 255, Flag = "SkelG", Callback = function(v) State.Color_Skeleton[2] = v end })
-ColorTab:CreateSlider({ Name = "Skeleton B", Range = {0, 255}, Increment = 1, CurrentValue = 255, Flag = "SkelB", Callback = function(v) State.Color_Skeleton[3] = v end })
-ColorTab:CreateSlider({ Name = "Tracer R", Range = {0, 255}, Increment = 1, CurrentValue = 255, Flag = "TracerR", Callback = function(v) State.Color_Tracer[1] = v end })
-ColorTab:CreateSlider({ Name = "Tracer G", Range = {0, 255}, Increment = 1, CurrentValue = 0, Flag = "TracerG", Callback = function(v) State.Color_Tracer[2] = v end })
-ColorTab:CreateSlider({ Name = "Tracer B", Range = {0, 255}, Increment = 1, CurrentValue = 0, Flag = "TracerB", Callback = function(v) State.Color_Tracer[3] = v end })
-ColorTab:CreateSlider({ Name = "FOV Circle R", Range = {0, 255}, Increment = 1, CurrentValue = 255, Flag = "FovR", Callback = function(v) State.Color_FOV[1] = v end })
-ColorTab:CreateSlider({ Name = "FOV Circle G", Range = {0, 255}, Increment = 1, CurrentValue = 255, Flag = "FovG", Callback = function(v) State.Color_FOV[2] = v end })
-ColorTab:CreateSlider({ Name = "FOV Circle B", Range = {0, 255}, Increment = 1, CurrentValue = 255, Flag = "FovB", Callback = function(v) State.Color_FOV[3] = v end })
-
 InfoTab:CreateParagraph({ Title = "Информация", Content = "Автор: jeffkiller231451\nКодер: Fox\nСаппорт: liloxa58\n\nТГ: https://t.me/hatanyana" })
 InfoTab:CreateButton({ Name = "Скопировать ТГ", Callback = function() setclipboard("https://t.me/hatanyana") Rayfield:Notify({Title = "Nyan", Content = "TG скопирован!", Duration = 5}) end })
 
 RunService.Heartbeat:Connect(function()
     local char = LocalPlayer.Character
     if char and char:FindFirstChild("Humanoid") then char.Humanoid.WalkSpeed = State.WalkSpeed end
-    
-    if State.ParticlesEnabled and ParticleEmitter.Parent == nil then
-        if char and char:FindFirstChild("HumanoidRootPart") then
-            ParticleEmitter.Parent = char.HumanoidRootPart
-        end
-    end
 end)
 
-Rayfield:Notify({ Title = "Nyan Script", Content = "Загружено! Открывай через встроенную кнопку.", Duration = 5 })
+Rayfield:Notify({ Title = "Nyan Script", Content = "Загружено! Призраки удалены.", Duration = 5 })
