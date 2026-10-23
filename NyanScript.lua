@@ -1,5 +1,5 @@
 --[[
-    [FPS] Flick — NYAN SCRIPT (Fixed Ghost ESP)
+    [FPS] Flick — NYAN SCRIPT (FOV Fixed)
     Автор: jeffkiller231451
     Главный кодер: Fox
     Моральная поддержка: liloxa58
@@ -39,7 +39,7 @@ local State = {
     ESP_Tracer = true,
     
     Crosshair = true,
-    ShowFOV = false,
+    ShowFOV = false, -- Круг FOV выключен
 }
 
 local Players = game:GetService("Players")
@@ -130,7 +130,16 @@ RenderStepped:Connect(function()
     end
 end)
 
--- ==== ПРИЦЕЛ ====
+-- ==== FOV CHANGER (ВОТ ОН, РАБОТАЕТ!) ====
+RenderStepped:Connect(function()
+    if State.CustomFOV then
+        if Camera.FieldOfView ~= State.FOVValue then
+            Camera.FieldOfView = State.FOVValue
+        end
+    end
+end)
+
+-- ==== ПРИЦЕЛ (ТОЛЬКО ТОЧКА) ====
 local crosshairDot = Drawing.new("Circle")
 crosshairDot.Thickness = 2
 crosshairDot.Radius = 3
@@ -160,7 +169,6 @@ end)
 
 -- ==== ESP ====
 local espCache = {}
-
 local function createESP(player)
     if espCache[player] then return end
     local d = {
@@ -190,10 +198,7 @@ local function removeESP(player)
     end
 end
 
--- Удаляем ESP, когда игрок выходит из игры
-Players.PlayerRemoving:Connect(function(player)
-    removeESP(player)
-end)
+Players.PlayerRemoving:Connect(function(player) removeESP(player) end)
 
 RenderStepped:Connect(function()
     for _, p in ipairs(Players:GetPlayers()) do
@@ -201,24 +206,14 @@ RenderStepped:Connect(function()
             if not espCache[p] then createESP(p) end
             local d = espCache[p]
             
-            -- ЖЁСТКАЯ ПРОВЕРКА: Игрок в игре? Живой? Есть персонаж?
             if not State.ESP or not p.Parent or not p.Character or not p.Character:FindFirstChild("HumanoidRootPart") then 
-                hideESP(d) 
-                continue 
+                hideESP(d) continue 
             end
             
             local char = p.Character; local hum = char:FindFirstChild("Humanoid"); local root = char.HumanoidRootPart
             
-            if not hum or hum.Health <= 0 then 
-                hideESP(d) 
-                continue 
-            end
-
-            -- Проверка, что голова и корень двигаются (а не просто в памяти висят)
-            if not root.Position or root.Position.Magnitude == 0 then
-                hideESP(d)
-                continue
-            end
+            if not hum or hum.Health <= 0 then hideESP(d) continue end
+            if not root.Position or root.Position.Magnitude == 0 then hideESP(d) continue end
             
             local screenPos, onScreen = Camera:WorldToViewportPoint(root.Position)
             if onScreen then
@@ -257,7 +252,10 @@ CombatTab:CreateSlider({ Name = "Aim FOV", Range = {50, 800}, Increment = 10, Su
 CombatTab:CreateSlider({ Name = "Max Distance", Range = {10, 1000}, Increment = 10, Suffix = " m", CurrentValue = 150, Flag = "MaxDist", Callback = function(v) State.MaxDistance = v end })
 
 VisualsTab:CreateToggle({ Name = "Custom FOV", CurrentValue = false, Flag = "CustomFOV", Callback = function(v) State.CustomFOV = v end })
-VisualsTab:CreateSlider({ Name = "FOV Value", Range = {40, 120}, Increment = 1, CurrentValue = 70, Flag = "FOVVal", Callback = function(v) State.FOVValue = v end })
+VisualsTab:CreateSlider({ Name = "FOV Value", Range = {40, 120}, Increment = 1, CurrentValue = 70, Flag = "FOVVal", Callback = function(v) 
+    State.FOVValue = v 
+    if State.CustomFOV then Camera.FieldOfView = v end
+end })
 VisualsTab:CreateToggle({ Name = "Crosshair", CurrentValue = true, Flag = "Crosshair", Callback = function(v) State.Crosshair = v end })
 VisualsTab:CreateToggle({ Name = "Show FOV Circle", CurrentValue = false, Flag = "ShowFOV", Callback = function(v) State.ShowFOV = v end })
 VisualsTab:CreateSlider({ Name = "WalkSpeed", Range = {16, 100}, Increment = 1, Suffix = " studs", CurrentValue = 16, Flag = "WS", Callback = function(v) State.WalkSpeed = v end })
@@ -277,4 +275,4 @@ RunService.Heartbeat:Connect(function()
     if char and char:FindFirstChild("Humanoid") then char.Humanoid.WalkSpeed = State.WalkSpeed end
 end)
 
-Rayfield:Notify({ Title = "Nyan Script", Content = "Загружено! Призраки удалены.", Duration = 5 })
+Rayfield:Notify({ Title = "Nyan Script", Content = "Загружено! FOV и триггер работают.", Duration = 5 })
