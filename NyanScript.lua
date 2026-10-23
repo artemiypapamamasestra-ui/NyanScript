@@ -1,5 +1,5 @@
 --[[
-    [FPS] Flick — NYAN SCRIPT (Full)
+    [FPS] Flick — NYAN SCRIPT (FOV Edition)
     Автор: jeffkiller231451
     Главный кодер: Fox
     Моральная поддержка: liloxa58
@@ -9,10 +9,10 @@
 local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
 
 local Window = Rayfield:CreateWindow({
-    Name = "Nyan Script | Flick",
+    Name = "Nyan Script | FOV",
     LoadingTitle = "Nyan Script",
     LoadingSubtitle = "by jeffkiller231451 & Fox",
-    ConfigurationSaving = { Enabled = true, FolderName = "NyanScript", FileName = "cfg" },
+    ConfigurationSaving = { Enabled = true, FolderName = "NyanFOV", FileName = "cfg" },
     KeySystem = false,
 })
 
@@ -28,6 +28,10 @@ local State = {
     FOV = 250,
     MaxDistance = 150,
     WalkSpeed = 16,
+    
+    -- НОВОЕ: Настройки камеры
+    CustomFOV = false,
+    FOVValue = 70, -- Стандартный FOV в Roblox (обычно 70)
     
     ESP = false,
     ESP_Box = true,
@@ -114,7 +118,6 @@ RenderStepped:Connect(function()
     local target = getClosestPlayer()
     if not target then return end
     
-    -- АИМ (Крутим камеру)
     if State.AimBot then
         if mousemoverel then
             local screenPos = Camera:WorldToViewportPoint(target.Position)
@@ -125,16 +128,21 @@ RenderStepped:Connect(function()
         end
     end
     
-    -- ТРИГГЕР (Стреляем только если нет стены)
     if State.TriggerBot then
         if isVisible(target) then
             if mouse1click then
                 mouse1click()
-            elseif mouse1press and mouse1release then
-                mouse1press()
-                task.wait(0.05)
-                mouse1release()
             end
+        end
+    end
+end)
+
+-- ==== FOV CHANGER ====
+RenderStepped:Connect(function()
+    if State.CustomFOV then
+        -- Если включен кастомный FOV, ставим наше значение
+        if Camera.FieldOfView ~= State.FOVValue then
+            Camera.FieldOfView = State.FOVValue
         end
     end
 end)
@@ -312,8 +320,18 @@ CombatTab:CreateToggle({ Name = "TriggerBot (Стрельба)", CurrentValue = 
 CombatTab:CreateSlider({ Name = "Aim FOV", Range = {50, 800}, Increment = 10, Suffix = " px", CurrentValue = 250, Flag = "FOV", Callback = function(v) State.FOV = v end })
 CombatTab:CreateSlider({ Name = "Max Distance", Range = {10, 1000}, Increment = 10, Suffix = " m", CurrentValue = 150, Flag = "MaxDist", Callback = function(v) State.MaxDistance = v end })
 
+-- НОВЫЙ БЛОК: НАСТРОЙКИ КАМЕРЫ (FOV)
+VisualsTab:CreateToggle({ Name = "Custom FOV (Изменить обзор)", CurrentValue = false, Flag = "CustomFOV", Callback = function(v) State.CustomFOV = v end })
+VisualsTab:CreateSlider({ Name = "FOV Value", Range = {40, 120}, Increment = 1, CurrentValue = 70, Flag = "FOVVal", Callback = function(v) 
+    State.FOVValue = v 
+    -- Если тумблер включен, применяем сразу
+    if State.CustomFOV then
+        Camera.FieldOfView = v
+    end
+end })
+
 VisualsTab:CreateToggle({ Name = "Crosshair", CurrentValue = true, Flag = "Crosshair", Callback = function(v) State.Crosshair = v end })
-VisualsTab:CreateToggle({ Name = "Show FOV", CurrentValue = true, Flag = "ShowFOV", Callback = function(v) State.ShowFOV = v end })
+VisualsTab:CreateToggle({ Name = "Show FOV Circle", CurrentValue = true, Flag = "ShowFOV", Callback = function(v) State.ShowFOV = v end })
 VisualsTab:CreateSlider({ Name = "WalkSpeed", Range = {16, 100}, Increment = 1, Suffix = " studs", CurrentValue = 16, Flag = "WS", Callback = function(v) State.WalkSpeed = v end })
 
 ESPTab:CreateToggle({ Name = "ESP", CurrentValue = false, Flag = "ESP", Callback = function(v) State.ESP = v end })
@@ -339,7 +357,6 @@ ColorTab:CreateSlider({ Name = "FOV Circle R", Range = {0, 255}, Increment = 1, 
 ColorTab:CreateSlider({ Name = "FOV Circle G", Range = {0, 255}, Increment = 1, CurrentValue = 255, Flag = "FovG", Callback = function(v) State.Color_FOV[2] = v end })
 ColorTab:CreateSlider({ Name = "FOV Circle B", Range = {0, 255}, Increment = 1, CurrentValue = 255, Flag = "FovB", Callback = function(v) State.Color_FOV[3] = v end })
 
--- ВКЛАДКА С АВТОРАМИ И ТГ
 InfoTab:CreateParagraph({
     Title = "Информация", 
     Content = "Автор скрипта: jeffkiller231451\nГлавный кодер: Fox\nМоральная поддержка: liloxa58\n\nТГ канал: https://t.me/hatanyana\n\nЗаходи за обновлениями и новыми скриптами!"
