@@ -1,5 +1,5 @@
 --[[
-    [FPS] Flick — NYAN SCRIPT (FOV Edition)
+    [FPS] Flick — NYAN SCRIPT (Mobile Clean)
     Автор: jeffkiller231451
     Главный кодер: Fox
     Моральная поддержка: liloxa58
@@ -9,10 +9,10 @@
 local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
 
 local Window = Rayfield:CreateWindow({
-    Name = "Nyan Script | FOV",
+    Name = "Nyan Script | Flick",
     LoadingTitle = "Nyan Script",
     LoadingSubtitle = "by jeffkiller231451 & Fox",
-    ConfigurationSaving = { Enabled = true, FolderName = "NyanFOV", FileName = "cfg" },
+    ConfigurationSaving = { Enabled = true, FolderName = "NyanScript", FileName = "cfg" },
     KeySystem = false,
 })
 
@@ -29,9 +29,8 @@ local State = {
     MaxDistance = 150,
     WalkSpeed = 16,
     
-    -- НОВОЕ: Настройки камеры
     CustomFOV = false,
-    FOVValue = 70, -- Стандартный FOV в Roblox (обычно 70)
+    FOVValue = 70,
     
     ESP = false,
     ESP_Box = true,
@@ -42,6 +41,10 @@ local State = {
     
     Crosshair = true,
     ShowFOV = true,
+    
+    ParticlesEnabled = false,
+    ParticleType = "Fire",
+    ParticleSpeed = 1,
     
     Color_Box = {255, 255, 255},
     Color_Skeleton = {255, 255, 255},
@@ -63,6 +66,45 @@ watermark.Color = Color3.fromRGB(255, 50, 50)
 watermark.Outline = true
 watermark.Position = Vector2.new(15, 15)
 watermark.Visible = true
+
+-- ==== ПАРТИКЛЫ (ЭМИТТЕРЫ) ====
+local ParticleEmitter = Instance.new("ParticleEmitter")
+ParticleEmitter.Name = "NyanParticles"
+ParticleEmitter.Enabled = false
+ParticleEmitter.Rate = 50
+ParticleEmitter.Lifetime = NumberRange.new(1, 2)
+ParticleEmitter.Speed = NumberRange.new(5, 10)
+ParticleEmitter.SpreadAngle = Vector2.new(180, 180)
+ParticleEmitter.RotSpeed = NumberRange.new(-90, 90)
+ParticleEmitter.LightEmission = 0.5
+ParticleEmitter.LightInfluence = 0
+ParticleEmitter.Size = NumberSequence.new(1)
+
+local Textures = {
+    ["Fire"] = "rbxassetid://243660364",
+    ["Sparkles"] = "rbxassetid://3945490826",
+    ["Snow"] = "rbxassetid://5028857472",
+    ["Smoke"] = "rbxassetid://243660364" 
+}
+
+local function updateParticles(type)
+    ParticleEmitter.Texture = Textures[type] or Textures["Fire"]
+    if type == "Fire" then
+        ParticleEmitter.Color = ColorSequence.new(Color3.fromRGB(255, 100, 0), Color3.fromRGB(255, 0, 0))
+        ParticleEmitter.Size = NumberSequence.new(2)
+    elseif type == "Sparkles" then
+        ParticleEmitter.Color = ColorSequence.new(Color3.fromRGB(255, 255, 0), Color3.fromRGB(255, 215, 0))
+        ParticleEmitter.Size = NumberSequence.new(1)
+    elseif type == "Snow" then
+        ParticleEmitter.Color = ColorSequence.new(Color3.fromRGB(255, 255, 255))
+        ParticleEmitter.Speed = NumberRange.new(2, 5)
+        ParticleEmitter.Size = NumberSequence.new(1)
+    elseif type == "Smoke" then
+        ParticleEmitter.Color = ColorSequence.new(Color3.fromRGB(50, 50, 50), Color3.fromRGB(100, 100, 100))
+        ParticleEmitter.Size = NumberSequence.new(5)
+        ParticleEmitter.Speed = NumberRange.new(1, 3)
+    end
+end
 
 -- ==== ПОИСК ЦЕЛИ ====
 local function getClosestPlayer()
@@ -94,12 +136,12 @@ local function getClosestPlayer()
     return closest
 end
 
--- ==== ПРОВЕРКА СТЕН (WALLCHECK) ====
+-- ==== ПРОВЕРКА СТЕН ====
 local function isVisible(target)
     if not target then return false end
     local camPos = Camera.CFrame.Position
     local rayParams = RaycastParams.new()
-    rayParams.FilterDescendantsInstances = {LocalPlayer.Character}
+    rayParams.FilterDescendantsInstances = {LocalPlayer.Character, ParticleEmitter}
     rayParams.FilterType = Enum.RaycastFilterType.Exclude
     
     local dir = (target.Position - camPos)
@@ -114,7 +156,6 @@ end
 -- ==== АИМБОТ И ТРИГГЕР ====
 RenderStepped:Connect(function()
     if not State.AimBot and not State.TriggerBot then return end
-    
     local target = getClosestPlayer()
     if not target then return end
     
@@ -123,16 +164,12 @@ RenderStepped:Connect(function()
             local screenPos = Camera:WorldToViewportPoint(target.Position)
             local center = Camera.ViewportSize / 2
             mousemoverel(screenPos.X - center.X, screenPos.Y - center.Y)
-        else
-            Camera.CFrame = CFrame.new(Camera.CFrame.Position, target.Position)
         end
     end
     
     if State.TriggerBot then
         if isVisible(target) then
-            if mouse1click then
-                mouse1click()
-            end
+            if mouse1click then mouse1click() end
         end
     end
 end)
@@ -140,10 +177,7 @@ end)
 -- ==== FOV CHANGER ====
 RenderStepped:Connect(function()
     if State.CustomFOV then
-        -- Если включен кастомный FOV, ставим наше значение
-        if Camera.FieldOfView ~= State.FOVValue then
-            Camera.FieldOfView = State.FOVValue
-        end
+        Camera.FieldOfView = State.FOVValue
     end
 end)
 
@@ -163,45 +197,27 @@ RenderStepped:Connect(function()
     local center = Camera.ViewportSize / 2
     crosshairDot.Color = Color3.fromRGB(255, 50, 50)
     fovCircle.Color = Color3.fromRGB(State.Color_FOV[1], State.Color_FOV[2], State.Color_FOV[3])
-    
     if State.Crosshair then
-        crosshairDot.Position = center
-        crosshairDot.Visible = true
-        fovCircle.Position = center
-        fovCircle.Radius = State.FOV
-        fovCircle.Visible = State.ShowFOV
+        crosshairDot.Position = center; crosshairDot.Visible = true
+        fovCircle.Position = center; fovCircle.Radius = State.FOV; fovCircle.Visible = State.ShowFOV
     else
-        crosshairDot.Visible = false
-        fovCircle.Visible = false
+        crosshairDot.Visible = false; fovCircle.Visible = false
     end
 end)
 
 -- ==== ESP ====
 local espCache = {}
-
 local function createESP(player)
     if espCache[player] then return end
-    if not Drawing then return end
-    
     local d = {
-        box = Drawing.new("Square"),
-        health = Drawing.new("Square"),
-        healthBg = Drawing.new("Square"),
-        name = Drawing.new("Text"),
-        tracer = Drawing.new("Line"),
-        skeleton = {
-            Head = Drawing.new("Line"), Torso = Drawing.new("Line"),
-            LeftArm = Drawing.new("Line"), RightArm = Drawing.new("Line"),
-            LeftLeg = Drawing.new("Line"), RightLeg = Drawing.new("Line"),
-        }
+        box = Drawing.new("Square"), health = Drawing.new("Square"), healthBg = Drawing.new("Square"),
+        name = Drawing.new("Text"), tracer = Drawing.new("Line"),
+        skeleton = { Head = Drawing.new("Line"), Torso = Drawing.new("Line"), LeftArm = Drawing.new("Line"), RightArm = Drawing.new("Line"), LeftLeg = Drawing.new("Line"), RightLeg = Drawing.new("Line") }
     }
-    
     d.box.Thickness = 1.5; d.box.Filled = false
-    d.healthBg.Filled = true; d.healthBg.Color = Color3.fromRGB(0, 0, 0)
-    d.health.Filled = true; d.health.Color = Color3.fromRGB(0, 255, 0)
+    d.healthBg.Filled = true; d.healthBg.Color = Color3.fromRGB(0, 0, 0); d.health.Filled = true; d.health.Color = Color3.fromRGB(0, 255, 0)
     d.name.Size = 14; d.name.Center = true; d.name.Outline = true; d.name.Color = Color3.fromRGB(255, 255, 255)
     d.tracer.Thickness = 1.5
-    
     for _, line in pairs(d.skeleton) do line.Thickness = 1.5 end
     espCache[player] = d
 end
@@ -216,20 +232,10 @@ RenderStepped:Connect(function()
         if p ~= LocalPlayer then
             if not espCache[p] then createESP(p) end
             local d = espCache[p]
-            if not d then continue end
-            
-            if not State.ESP or not p.Character or not p.Character:FindFirstChild("HumanoidRootPart") then
-                hideESP(d) continue
-            end
-            
-            local char = p.Character
-            local hum = char:FindFirstChild("Humanoid")
-            local root = char.HumanoidRootPart
-            
+            if not State.ESP or not p.Character or not p.Character:FindFirstChild("HumanoidRootPart") then hideESP(d) continue end
+            local char = p.Character; local hum = char:FindFirstChild("Humanoid"); local root = char.HumanoidRootPart
             if not hum or hum.Health <= 0 then hideESP(d) continue end
-            
             local screenPos, onScreen = Camera:WorldToViewportPoint(root.Position)
-            
             if onScreen then
                 local dist = (Camera.CFrame.Position - root.Position).Magnitude
                 local boxSize = Vector2.new(2000 / dist, 3000 / dist)
@@ -244,27 +250,18 @@ RenderStepped:Connect(function()
                 
                 if State.ESP_Box then d.box.Size = boxSize; d.box.Position = boxPos; d.box.Visible = true else d.box.Visible = false end
                 if State.ESP_Name then d.name.Text = p.Name .. " [" .. math.floor(dist) .. "m]"; d.name.Position = Vector2.new(screenPos.X, boxPos.Y - 18); d.name.Visible = true else d.name.Visible = false end
-                
-                if State.ESP_Tracer then
-                    d.tracer.From = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y)
-                    d.tracer.To = Vector2.new(screenPos.X, screenPos.Y)
-                    d.tracer.Visible = true
-                else d.tracer.Visible = false end
-                
+                if State.ESP_Tracer then d.tracer.From = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y); d.tracer.To = Vector2.new(screenPos.X, screenPos.Y); d.tracer.Visible = true else d.tracer.Visible = false end
                 if State.ESP_Health then
-                    local hPercent = hum.Health / hum.MaxHealth
-                    local hHeight = boxSize.Y * hPercent
+                    local hPercent = hum.Health / hum.MaxHealth; local hHeight = boxSize.Y * hPercent
                     d.healthBg.Size = Vector2.new(3, boxSize.Y); d.healthBg.Position = Vector2.new(boxPos.X - 6, boxPos.Y)
                     d.health.Size = Vector2.new(3, hHeight); d.health.Position = Vector2.new(boxPos.X - 6, boxPos.Y + (boxSize.Y - hHeight))
                     d.healthBg.Visible = true; d.health.Visible = true
                 else d.healthBg.Visible = false; d.health.Visible = false end
-                
                 if State.ESP_Skeleton then
                     local function getPos(n) local part = char:FindFirstChild(n); if part then local pos, on = Camera:WorldToViewportPoint(part.Position); if on then return Vector2.new(pos.X, pos.Y) end end return nil end
                     local head, torso = getPos("Head"), getPos("UpperTorso") or getPos("Torso")
                     local lArm, rArm = getPos("LeftUpperArm") or getPos("Left Arm"), getPos("RightUpperArm") or getPos("Right Arm")
                     local lLeg, rLeg = getPos("LeftUpperLeg") or getPos("Left Leg"), getPos("RightUpperLeg") or getPos("Right Leg")
-                    
                     local function setLine(l, p1, p2) if p1 and p2 then l.From = p1; l.To = p2; l.Visible = true else l.Visible = false end end
                     setLine(d.skeleton.Head, head, torso); setLine(d.skeleton.LeftArm, lArm, torso); setLine(d.skeleton.RightArm, rArm, torso)
                     setLine(d.skeleton.LeftLeg, lLeg, torso); setLine(d.skeleton.RightLeg, rLeg, torso); setLine(d.skeleton.Torso, lLeg, rLeg)
@@ -274,65 +271,38 @@ RenderStepped:Connect(function()
     end
 end)
 
--- ==== КНОПКА И UI ====
-local function getGuiParent()
-    if gethui then local ok, hui = pcall(gethui); if ok and hui then return hui end end
-    local ok, cg = pcall(function() return game:GetService("CoreGui") end); if ok and cg then return cg end
-    return game:GetService("Players").LocalPlayer:WaitForChild("PlayerGui")
-end
-
-local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "NyanMobileBtn"
-ScreenGui.ResetOnSpawn = false
-ScreenGui.IgnoreGuiInset = true
-ScreenGui.Parent = getGuiParent()
-
-local ToggleBtn = Instance.new("TextButton")
-ToggleBtn.Size = UDim2.new(0, 60, 0, 60)
-ToggleBtn.Position = UDim2.new(1, -80, 1, -120)
-ToggleBtn.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
-ToggleBtn.BackgroundTransparency = 0.3
-ToggleBtn.Text = "🐱"
-ToggleBtn.TextSize = 32
-ToggleBtn.Font = Enum.Font.GothamBold
-ToggleBtn.BorderSizePixel = 0
-ToggleBtn.Active = true
-ToggleBtn.Draggable = true
-ToggleBtn.Parent = ScreenGui
-
-local UICorner = Instance.new("UICorner")
-UICorner.CornerRadius = UDim.new(0, 12)
-UICorner.Parent = ToggleBtn
-
-local UIStroke = Instance.new("UIStroke")
-UIStroke.Color = Color3.fromRGB(0, 255, 255)
-UIStroke.Thickness = 2
-UIStroke.Parent = ToggleBtn
-
-ToggleBtn.MouseButton1Click:Connect(function()
-    local ok = pcall(function() Rayfield:Toggle(true) end)
-    if not ok then pcall(function() Rayfield:Open() end) end
-end)
-
--- Базовые настройки
-CombatTab:CreateToggle({ Name = "AimBot (Наводка)", CurrentValue = false, Flag = "AimBot", Callback = function(v) State.AimBot = v end })
-CombatTab:CreateToggle({ Name = "TriggerBot (Стрельба)", CurrentValue = false, Flag = "TriggerBot", Callback = function(v) State.TriggerBot = v end })
+-- ==== UI БЕЗ КНОПКИ ====
+CombatTab:CreateToggle({ Name = "AimBot", CurrentValue = false, Flag = "AimBot", Callback = function(v) State.AimBot = v end })
+CombatTab:CreateToggle({ Name = "TriggerBot (WallCheck)", CurrentValue = false, Flag = "TriggerBot", Callback = function(v) State.TriggerBot = v end })
 CombatTab:CreateSlider({ Name = "Aim FOV", Range = {50, 800}, Increment = 10, Suffix = " px", CurrentValue = 250, Flag = "FOV", Callback = function(v) State.FOV = v end })
 CombatTab:CreateSlider({ Name = "Max Distance", Range = {10, 1000}, Increment = 10, Suffix = " m", CurrentValue = 150, Flag = "MaxDist", Callback = function(v) State.MaxDistance = v end })
 
--- НОВЫЙ БЛОК: НАСТРОЙКИ КАМЕРЫ (FOV)
-VisualsTab:CreateToggle({ Name = "Custom FOV (Изменить обзор)", CurrentValue = false, Flag = "CustomFOV", Callback = function(v) State.CustomFOV = v end })
-VisualsTab:CreateSlider({ Name = "FOV Value", Range = {40, 120}, Increment = 1, CurrentValue = 70, Flag = "FOVVal", Callback = function(v) 
-    State.FOVValue = v 
-    -- Если тумблер включен, применяем сразу
-    if State.CustomFOV then
-        Camera.FieldOfView = v
-    end
-end })
-
+VisualsTab:CreateToggle({ Name = "Custom FOV", CurrentValue = false, Flag = "CustomFOV", Callback = function(v) State.CustomFOV = v end })
+VisualsTab:CreateSlider({ Name = "FOV Value", Range = {40, 120}, Increment = 1, CurrentValue = 70, Flag = "FOVVal", Callback = function(v) State.FOVValue = v end })
 VisualsTab:CreateToggle({ Name = "Crosshair", CurrentValue = true, Flag = "Crosshair", Callback = function(v) State.Crosshair = v end })
 VisualsTab:CreateToggle({ Name = "Show FOV Circle", CurrentValue = true, Flag = "ShowFOV", Callback = function(v) State.ShowFOV = v end })
 VisualsTab:CreateSlider({ Name = "WalkSpeed", Range = {16, 100}, Increment = 1, Suffix = " studs", CurrentValue = 16, Flag = "WS", Callback = function(v) State.WalkSpeed = v end })
+
+VisualsTab:CreateToggle({ Name = "World Particles", CurrentValue = false, Flag = "Particles", Callback = function(v) 
+    State.ParticlesEnabled = v
+    ParticleEmitter.Enabled = v
+    if v then
+        local char = LocalPlayer.Character
+        if char and char:FindFirstChild("HumanoidRootPart") then
+            ParticleEmitter.Parent = char.HumanoidRootPart
+        end
+    else
+        ParticleEmitter.Parent = nil
+    end
+end })
+VisualsTab:CreateDropdown({ Name = "Particle Type", Options = {"Fire", "Sparkles", "Snow", "Smoke"}, CurrentOption = {"Fire"}, Flag = "PType", Callback = function(opt) 
+    State.ParticleType = opt[1]
+    updateParticles(State.ParticleType)
+end })
+VisualsTab:CreateSlider({ Name = "Particle Speed", Range = {0.1, 5}, Increment = 0.1, CurrentValue = 1, Flag = "PSpeed", Callback = function(v) 
+    State.ParticleSpeed = v
+    ParticleEmitter.Speed = NumberRange.new(v, v * 2)
+end })
 
 ESPTab:CreateToggle({ Name = "ESP", CurrentValue = false, Flag = "ESP", Callback = function(v) State.ESP = v end })
 ESPTab:CreateToggle({ Name = "Box", CurrentValue = true, Flag = "ESP_Box", Callback = function(v) State.ESP_Box = v end })
@@ -344,34 +314,28 @@ ESPTab:CreateToggle({ Name = "Tracers", CurrentValue = true, Flag = "ESP_Tracer"
 ColorTab:CreateSlider({ Name = "Box R", Range = {0, 255}, Increment = 1, CurrentValue = 255, Flag = "BoxR", Callback = function(v) State.Color_Box[1] = v end })
 ColorTab:CreateSlider({ Name = "Box G", Range = {0, 255}, Increment = 1, CurrentValue = 255, Flag = "BoxG", Callback = function(v) State.Color_Box[2] = v end })
 ColorTab:CreateSlider({ Name = "Box B", Range = {0, 255}, Increment = 1, CurrentValue = 255, Flag = "BoxB", Callback = function(v) State.Color_Box[3] = v end })
-
 ColorTab:CreateSlider({ Name = "Skeleton R", Range = {0, 255}, Increment = 1, CurrentValue = 255, Flag = "SkelR", Callback = function(v) State.Color_Skeleton[1] = v end })
 ColorTab:CreateSlider({ Name = "Skeleton G", Range = {0, 255}, Increment = 1, CurrentValue = 255, Flag = "SkelG", Callback = function(v) State.Color_Skeleton[2] = v end })
 ColorTab:CreateSlider({ Name = "Skeleton B", Range = {0, 255}, Increment = 1, CurrentValue = 255, Flag = "SkelB", Callback = function(v) State.Color_Skeleton[3] = v end })
-
 ColorTab:CreateSlider({ Name = "Tracer R", Range = {0, 255}, Increment = 1, CurrentValue = 255, Flag = "TracerR", Callback = function(v) State.Color_Tracer[1] = v end })
 ColorTab:CreateSlider({ Name = "Tracer G", Range = {0, 255}, Increment = 1, CurrentValue = 0, Flag = "TracerG", Callback = function(v) State.Color_Tracer[2] = v end })
 ColorTab:CreateSlider({ Name = "Tracer B", Range = {0, 255}, Increment = 1, CurrentValue = 0, Flag = "TracerB", Callback = function(v) State.Color_Tracer[3] = v end })
-
 ColorTab:CreateSlider({ Name = "FOV Circle R", Range = {0, 255}, Increment = 1, CurrentValue = 255, Flag = "FovR", Callback = function(v) State.Color_FOV[1] = v end })
 ColorTab:CreateSlider({ Name = "FOV Circle G", Range = {0, 255}, Increment = 1, CurrentValue = 255, Flag = "FovG", Callback = function(v) State.Color_FOV[2] = v end })
 ColorTab:CreateSlider({ Name = "FOV Circle B", Range = {0, 255}, Increment = 1, CurrentValue = 255, Flag = "FovB", Callback = function(v) State.Color_FOV[3] = v end })
 
-InfoTab:CreateParagraph({
-    Title = "Информация", 
-    Content = "Автор скрипта: jeffkiller231451\nГлавный кодер: Fox\nМоральная поддержка: liloxa58\n\nТГ канал: https://t.me/hatanyana\n\nЗаходи за обновлениями и новыми скриптами!"
-})
-InfoTab:CreateButton({
-    Name = "Скопировать ссылку на ТГ", 
-    Callback = function()
-        setclipboard("https://t.me/hatanyana")
-        Rayfield:Notify({Title = "Nyan Script", Content = "Ссылка на ТГ скопирована!", Duration = 5})
-    end
-})
+InfoTab:CreateParagraph({ Title = "Информация", Content = "Автор: jeffkiller231451\nКодер: Fox\nСаппорт: liloxa58\n\nТГ: https://t.me/hatanyana" })
+InfoTab:CreateButton({ Name = "Скопировать ТГ", Callback = function() setclipboard("https://t.me/hatanyana") Rayfield:Notify({Title = "Nyan", Content = "TG скопирован!", Duration = 5}) end })
 
 RunService.Heartbeat:Connect(function()
     local char = LocalPlayer.Character
     if char and char:FindFirstChild("Humanoid") then char.Humanoid.WalkSpeed = State.WalkSpeed end
+    
+    if State.ParticlesEnabled and ParticleEmitter.Parent == nil then
+        if char and char:FindFirstChild("HumanoidRootPart") then
+            ParticleEmitter.Parent = char.HumanoidRootPart
+        end
+    end
 end)
 
-Rayfield:Notify({ Title = "Nyan Script", Content = "by jeffkiller231451 | TG: @hatanyana", Duration = 5 })
+Rayfield:Notify({ Title = "Nyan Script", Content = "Загружено! Открывай через встроенную кнопку.", Duration = 5 })
