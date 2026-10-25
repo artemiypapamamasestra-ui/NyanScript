@@ -1,5 +1,5 @@
 --[[
-    [FPS] Flick — NYAN SCRIPT (Hitbox Expander)
+    [FPS] Flick — NYAN SCRIPT (Stable)
     Автор: jeffkiller231451
     Главный кодер: Fox
     Моральная поддержка: liloxa58
@@ -43,10 +43,6 @@ local State = {
     
     BHop = false,
     BHopSpeed = 35,
-    
-    -- НОВОЕ: Hitbox Expander
-    HitboxExpander = false,
-    HitboxSize = 5, -- Размер в стадах (стандартная голова ~2)
 }
 
 local Players = game:GetService("Players")
@@ -54,7 +50,6 @@ local RunService = game:GetService("RunService")
 local LocalPlayer = Players.LocalPlayer
 local Camera = workspace.CurrentCamera
 local RenderStepped = RunService.RenderStepped
-local UIS = game:GetService("UserInputService")
 
 -- ==== ВОДЯНОЙ ЗНАК ====
 local watermark = Drawing.new("Text")
@@ -173,56 +168,6 @@ RenderStepped:Connect(function()
     end
 end)
 
--- ==== HITBOX EXPANDER ====
-local hitboxCache = {}
-
-local function clearHitboxes()
-    for p, part in pairs(hitboxCache) do
-        if part then part:Destroy() end
-        hitboxCache[p] = nil
-    end
-end
-
-RenderStepped:Connect(function()
-    if not State.HitboxExpander then
-        if next(hitboxCache) then clearHitboxes() end
-        return
-    end
-
-    for _, p in ipairs(Players:GetPlayers()) do
-        if p ~= LocalPlayer and p.Character and p.Character:FindFirstChild("HumanoidRootPart") then
-            local char = p.Character
-            local hum = char:FindFirstChild("Humanoid")
-            local root = char:FindFirstChild("HumanoidRootPart")
-            
-            if hum and hum.Health > 0 and root then
-                if not hitboxCache[p] or not hitboxCache[p].Parent then
-                    local box = Instance.new("Part")
-                    box.Name = "NyanHitbox"
-                    box.Size = Vector3.new(State.HitboxSize, State.HitboxSize, State.HitboxSize)
-                    box.Transparency = 0.9 -- Почти невидимый
-                    box.CanCollide = false
-                    box.Anchored = true
-                    box.CanQuery = true -- Важно, чтобы пуля в него попадала
-                    box.Parent = workspace
-                    hitboxCache[p] = box
-                end
-                
-                local box = hitboxCache[p]
-                box.Size = Vector3.new(State.HitboxSize, State.HitboxSize, State.HitboxSize)
-                box.CFrame = root.CFrame -- Привязываем к персонажу
-            else
-                if hitboxCache[p] then hitboxCache[p]:Destroy(); hitboxCache[p] = nil end
-            end
-        end
-    end
-end)
-
--- Очистка при выходе игрока
-Players.PlayerRemoving:Connect(function(p)
-    if hitboxCache[p] then hitboxCache[p]:Destroy(); hitboxCache[p] = nil end
-end)
-
 -- ==== ПРИЦЕЛ ====
 local crosshairDot = Drawing.new("Circle")
 crosshairDot.Thickness = 2
@@ -335,13 +280,8 @@ CombatTab:CreateSlider({ Name = "Trigger Delay", Range = {0.01, 1}, Increment = 
 CombatTab:CreateSlider({ Name = "Aim FOV", Range = {50, 800}, Increment = 10, Suffix = " px", CurrentValue = 250, Flag = "FOV", Callback = function(v) State.FOV = v end })
 CombatTab:CreateSlider({ Name = "Max Distance", Range = {10, 1000}, Increment = 10, Suffix = " m", CurrentValue = 150, Flag = "MaxDist", Callback = function(v) State.MaxDistance = v end })
 
--- BHop UI
 CombatTab:CreateToggle({ Name = "BHop", CurrentValue = false, Flag = "BHop", Callback = function(v) State.BHop = v end })
 CombatTab:CreateSlider({ Name = "BHop Speed", Range = {16, 100}, Increment = 1, CurrentValue = 35, Flag = "BHopSpeed", Callback = function(v) State.BHopSpeed = v end })
-
--- HITBOX EXPANDER UI
-CombatTab:CreateToggle({ Name = "Hitbox Expander", CurrentValue = false, Flag = "HitboxExp", Callback = function(v) State.HitboxExpander = v end })
-CombatTab:CreateSlider({ Name = "Hitbox Size", Range = {2, 20}, Increment = 1, CurrentValue = 5, Flag = "HitboxSize", Callback = function(v) State.HitboxSize = v end })
 
 VisualsTab:CreateToggle({ Name = "Custom FOV", CurrentValue = false, Flag = "CustomFOV", Callback = function(v) State.CustomFOV = v end })
 VisualsTab:CreateSlider({ Name = "FOV Value", Range = {40, 120}, Increment = 1, CurrentValue = 70, Flag = "FOVVal", Callback = function(v) 
@@ -359,12 +299,17 @@ ESPTab:CreateToggle({ Name = "Health", CurrentValue = true, Flag = "ESP_Health",
 ESPTab:CreateToggle({ Name = "Name", CurrentValue = true, Flag = "ESP_Name", Callback = function(v) State.ESP_Name = v end })
 ESPTab:CreateToggle({ Name = "Tracers", CurrentValue = true, Flag = "ESP_Tracer", Callback = function(v) State.ESP_Tracer = v end })
 
-InfoTab:CreateParagraph({ Title = "Информация", Content = "Автор: jeffkiller231451\nКодер: Fox\nСаппорт: liloxa58\n\nТГ: https://t.me/hatanyana" })
+-- ВКЛАДКА INFO С ССЫЛКАМИ
+InfoTab:CreateParagraph({ 
+    Title = "Информация", 
+    Content = "Автор: jeffkiller231451\nКодер: Fox\nСаппорт: liloxa58\n\nТГ: https://t.me/hatanyana\nДС: https://discord.gg/7bxaxuRjbg" 
+})
 InfoTab:CreateButton({ Name = "Скопировать ТГ", Callback = function() setclipboard("https://t.me/hatanyana") Rayfield:Notify({Title = "Nyan", Content = "TG скопирован!", Duration = 5}) end })
+InfoTab:CreateButton({ Name = "Скопировать ДС", Callback = function() setclipboard("https://discord.gg/7bxaxuRjbg") Rayfield:Notify({Title = "Nyan", Content = "Discord скопирован!", Duration = 5}) end })
 
 RunService.Heartbeat:Connect(function()
     local char = LocalPlayer.Character
     if char and char:FindFirstChild("Humanoid") then char.Humanoid.WalkSpeed = State.WalkSpeed end
 end)
 
-Rayfield:Notify({ Title = "Nyan Script", Content = "Загружено! Hitbox Expander добавлен.", Duration = 5 })
+Rayfield:Notify({ Title = "Nyan Script", Content = "Загружено! ДС и ТГ в Info.", Duration = 5 })
