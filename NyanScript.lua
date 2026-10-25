@@ -1,8 +1,9 @@
 --[[
-    [FPS] Flick — NYAN SCRIPT (FOV Fixed)
+    [FPS] Flick — NYAN SCRIPT (Real BHop)
     Автор: jeffkiller231451
     Главный кодер: Fox
     Моральная поддержка: liloxa58
+    Telegram: https://t.me/hatanyana
 ]]
 
 local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
@@ -39,7 +40,11 @@ local State = {
     ESP_Tracer = true,
     
     Crosshair = true,
-    ShowFOV = false, -- Круг FOV выключен
+    ShowFOV = false,
+    
+    -- BHop
+    BHop = false,
+    BHopSpeed = 35, -- Сила буста при прыжке
 }
 
 local Players = game:GetService("Players")
@@ -47,6 +52,7 @@ local RunService = game:GetService("RunService")
 local LocalPlayer = Players.LocalPlayer
 local Camera = workspace.CurrentCamera
 local RenderStepped = RunService.RenderStepped
+local UIS = game:GetService("UserInputService")
 
 -- ==== ВОДЯНОЙ ЗНАК ====
 local watermark = Drawing.new("Text")
@@ -130,7 +136,7 @@ RenderStepped:Connect(function()
     end
 end)
 
--- ==== FOV CHANGER (ВОТ ОН, РАБОТАЕТ!) ====
+-- ==== FOV CHANGER ====
 RenderStepped:Connect(function()
     if State.CustomFOV then
         if Camera.FieldOfView ~= State.FOVValue then
@@ -139,7 +145,38 @@ RenderStepped:Connect(function()
     end
 end)
 
--- ==== ПРИЦЕЛ (ТОЛЬКО ТОЧКА) ====
+-- ==== BUNNY HOP (РЕАЛЬНЫЙ БУСТ) ====
+local lastJumpTime = 0
+
+RenderStepped:Connect(function()
+    if not State.BHop then return end
+    
+    local char = LocalPlayer.Character
+    if not char then return end
+    
+    local hum = char:FindFirstChild("Humanoid")
+    local root = char:FindFirstChild("HumanoidRootPart")
+    
+    if hum and root then
+        -- Если мы на земле и пытаемся двигаться
+        if hum.FloorMaterial ~= Enum.Material.Air then
+            local moveDir = hum.MoveDirection
+            
+            -- Если мы куда-то бежим, даем буст скорости и прыгаем
+            if moveDir.Magnitude > 0 then
+                if tick() - lastJumpTime > 0.1 then
+                    -- Даем скорость вперед
+                    root.Velocity = Vector3.new(moveDir.X * State.BHopSpeed, root.Velocity.Y + 50, moveDir.Z * State.BHopSpeed)
+                    -- Прыгаем
+                    hum.Jump = true
+                    lastJumpTime = tick()
+                end
+            end
+        end
+    end
+end)
+
+-- ==== ПРИЦЕЛ ====
 local crosshairDot = Drawing.new("Circle")
 crosshairDot.Thickness = 2
 crosshairDot.Radius = 3
@@ -251,6 +288,10 @@ CombatTab:CreateSlider({ Name = "Trigger Delay", Range = {0.01, 1}, Increment = 
 CombatTab:CreateSlider({ Name = "Aim FOV", Range = {50, 800}, Increment = 10, Suffix = " px", CurrentValue = 250, Flag = "FOV", Callback = function(v) State.FOV = v end })
 CombatTab:CreateSlider({ Name = "Max Distance", Range = {10, 1000}, Increment = 10, Suffix = " m", CurrentValue = 150, Flag = "MaxDist", Callback = function(v) State.MaxDistance = v end })
 
+-- НОВОЕ: BHop
+CombatTab:CreateToggle({ Name = "BHop (Буст скорости)", CurrentValue = false, Flag = "BHop", Callback = function(v) State.BHop = v end })
+CombatTab:CreateSlider({ Name = "BHop Speed", Range = {16, 100}, Increment = 1, CurrentValue = 35, Flag = "BHopSpeed", Callback = function(v) State.BHopSpeed = v end })
+
 VisualsTab:CreateToggle({ Name = "Custom FOV", CurrentValue = false, Flag = "CustomFOV", Callback = function(v) State.CustomFOV = v end })
 VisualsTab:CreateSlider({ Name = "FOV Value", Range = {40, 120}, Increment = 1, CurrentValue = 70, Flag = "FOVVal", Callback = function(v) 
     State.FOVValue = v 
@@ -275,4 +316,4 @@ RunService.Heartbeat:Connect(function()
     if char and char:FindFirstChild("Humanoid") then char.Humanoid.WalkSpeed = State.WalkSpeed end
 end)
 
-Rayfield:Notify({ Title = "Nyan Script", Content = "Загружено! FOV и триггер работают.", Duration = 5 })
+Rayfield:Notify({ Title = "Nyan Script", Content = "Загружено! BHop дает буст.", Duration = 5 })
