@@ -1,25 +1,29 @@
 --[[
-    [FPS] Flick — NYAN SCRIPT (Stable)
+    [FPS] Flick — NYAN SCRIPT (Obsidian UI)
     Автор: jeffkiller231451
     Главный кодер: Fox
     Моральная поддержка: liloxa58
 ]]
 
-local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
+local Obsidian = loadstring(game:HttpGet("https://raw.githubusercontent.com/mstudio45/Obsidian/main/Obsidian.lua"))()
 
-local Window = Rayfield:CreateWindow({
-    Name = "Nyan Script | Flick",
-    LoadingTitle = "Nyan Script",
-    LoadingSubtitle = "by jeffkiller231451 & Fox",
-    ConfigurationSaving = { Enabled = true, FolderName = "NyanScript", FileName = "cfg" },
+local Window = Obsidian:CreateWindow({
+    Title = "Nyan Script | Flick",
+    Subtitle = "by jeffkiller231451 & Fox",
+    TabWidth = 160,
+    Size = UDim2.fromOffset(830, 480),
+    Theme = "Dark",
     KeySystem = false,
 })
 
-local CombatTab = Window:CreateTab("Combat", nil)
-local VisualsTab = Window:CreateTab("Visuals", nil)
-local ESPTab = Window:CreateTab("ESP", nil)
-local InfoTab = Window:CreateTab("Info", nil)
+-- ==== ВКЛАДКИ ====
+local MainTab = Window:Tab("Главная")
+local CombatTab = Window:Tab("Основные")
+local AuthorsTab = Window:Tab("Авторы")
+local SettingsTab = Window:Tab("Настройки")
+local AddonsTab = Window:Tab("Аддоны")
 
+-- ==== СОСТОЯНИЕ ====
 local State = {
     AimBot = false,
     TriggerBot = false,
@@ -27,20 +31,16 @@ local State = {
     FOV = 250,
     MaxDistance = 150,
     WalkSpeed = 16,
-    
     CustomFOV = false,
     FOVValue = 70,
-    
     ESP = false,
     ESP_Box = true,
     ESP_Skeleton = true,
     ESP_Health = true,
     ESP_Name = true,
     ESP_Tracer = true,
-    
     Crosshair = true,
     ShowFOV = false,
-    
     BHop = false,
     BHopSpeed = 35,
 }
@@ -274,42 +274,55 @@ RenderStepped:Connect(function()
 end)
 
 -- ==== UI ====
-CombatTab:CreateToggle({ Name = "AimBot", CurrentValue = false, Flag = "AimBot", Callback = function(v) State.AimBot = v end })
-CombatTab:CreateToggle({ Name = "TriggerBot", CurrentValue = false, Flag = "TriggerBot", Callback = function(v) State.TriggerBot = v end })
-CombatTab:CreateSlider({ Name = "Trigger Delay", Range = {0.01, 1}, Increment = 0.01, Suffix = " sec", CurrentValue = 0.1, Flag = "TrigDelay", Callback = function(v) State.TriggerDelay = v end })
-CombatTab:CreateSlider({ Name = "Aim FOV", Range = {50, 800}, Increment = 10, Suffix = " px", CurrentValue = 250, Flag = "FOV", Callback = function(v) State.FOV = v end })
-CombatTab:CreateSlider({ Name = "Max Distance", Range = {10, 1000}, Increment = 10, Suffix = " m", CurrentValue = 150, Flag = "MaxDist", Callback = function(v) State.MaxDistance = v end })
 
-CombatTab:CreateToggle({ Name = "BHop", CurrentValue = false, Flag = "BHop", Callback = function(v) State.BHop = v end })
-CombatTab:CreateSlider({ Name = "BHop Speed", Range = {16, 100}, Increment = 1, CurrentValue = 35, Flag = "BHopSpeed", Callback = function(v) State.BHopSpeed = v end })
+-- Главная
+local MainGroup = MainTab:Group("Список изменений")
+MainGroup:Paragraph("03.10.2026\n[+] Added Anti Noise\n[+] Added Anti Crusher\n[+] Added Destroy Noise TV\n[+] Added trash Esp\n[+] Added more things on 'Ignore list'\n[+] Added auto parry Timoty\n[+] DO NOT ACTIVE THIS (beta)\n[+] Added Enable move tabs or no\n[+] Added Notify Structures")
 
-VisualsTab:CreateToggle({ Name = "Custom FOV", CurrentValue = false, Flag = "CustomFOV", Callback = function(v) State.CustomFOV = v end })
-VisualsTab:CreateSlider({ Name = "FOV Value", Range = {40, 120}, Increment = 1, CurrentValue = 70, Flag = "FOVVal", Callback = function(v) 
+-- Основные (Combat + ESP)
+local CombatGroup = CombatTab:Group("Combat")
+CombatGroup:Toggle("AimBot", false, function(v) State.AimBot = v end)
+CombatGroup:Toggle("TriggerBot", false, function(v) State.TriggerBot = v end)
+CombatGroup:Slider("Trigger Delay", 0.01, 1, 0.1, function(v) State.TriggerDelay = v end)
+CombatGroup:Slider("Aim FOV", 50, 800, 250, function(v) State.FOV = v end)
+CombatGroup:Slider("Max Distance", 10, 1000, 150, function(v) State.MaxDistance = v end)
+CombatGroup:Toggle("BHop", false, function(v) State.BHop = v end)
+CombatGroup:Slider("BHop Speed", 16, 100, 35, function(v) State.BHopSpeed = v end)
+
+local ESPGroup = CombatTab:Group("ESP")
+ESPGroup:Toggle("ESP", false, function(v) State.ESP = v end)
+ESPGroup:Toggle("ESP Box", true, function(v) State.ESP_Box = v end)
+ESPGroup:Toggle("ESP Skeleton", true, function(v) State.ESP_Skeleton = v end)
+ESPGroup:Toggle("ESP Health", true, function(v) State.ESP_Health = v end)
+ESPGroup:Toggle("ESP Name", true, function(v) State.ESP_Name = v end)
+ESPGroup:Toggle("ESP Tracer", true, function(v) State.ESP_Tracer = v end)
+
+-- Настройки (Visuals)
+local VisGroup = SettingsTab:Group("Visuals")
+VisGroup:Toggle("Custom FOV", false, function(v) State.CustomFOV = v end)
+VisGroup:Slider("FOV Value", 40, 120, 70, function(v) 
     State.FOVValue = v 
     if State.CustomFOV then Camera.FieldOfView = v end
-end })
-VisualsTab:CreateToggle({ Name = "Crosshair", CurrentValue = true, Flag = "Crosshair", Callback = function(v) State.Crosshair = v end })
-VisualsTab:CreateToggle({ Name = "Show FOV Circle", CurrentValue = false, Flag = "ShowFOV", Callback = function(v) State.ShowFOV = v end })
-VisualsTab:CreateSlider({ Name = "WalkSpeed", Range = {16, 100}, Increment = 1, Suffix = " studs", CurrentValue = 16, Flag = "WS", Callback = function(v) State.WalkSpeed = v end })
+end)
+VisGroup:Toggle("Crosshair", true, function(v) State.Crosshair = v end)
+VisGroup:Toggle("Show FOV Circle", false, function(v) State.ShowFOV = v end)
+VisGroup:Slider("WalkSpeed", 16, 100, 16, function(v) State.WalkSpeed = v end)
 
-ESPTab:CreateToggle({ Name = "ESP", CurrentValue = false, Flag = "ESP", Callback = function(v) State.ESP = v end })
-ESPTab:CreateToggle({ Name = "Box", CurrentValue = true, Flag = "ESP_Box", Callback = function(v) State.ESP_Box = v end })
-ESPTab:CreateToggle({ Name = "Skeleton", CurrentValue = true, Flag = "ESP_Skeleton", Callback = function(v) State.ESP_Skeleton = v end })
-ESPTab:CreateToggle({ Name = "Health", CurrentValue = true, Flag = "ESP_Health", Callback = function(v) State.ESP_Health = v end })
-ESPTab:CreateToggle({ Name = "Name", CurrentValue = true, Flag = "ESP_Name", Callback = function(v) State.ESP_Name = v end })
-ESPTab:CreateToggle({ Name = "Tracers", CurrentValue = true, Flag = "ESP_Tracer", Callback = function(v) State.ESP_Tracer = v end })
+-- Авторы
+local AuthorsGroup = AuthorsTab:Group("Информация")
+AuthorsGroup:Paragraph("Автор: jeffkiller231451\nКодер: Fox\nСаппорт: liloxa58\n\nТГ: https://t.me/hatanyana\nДС: https://discord.gg/7bxaxuRjbg")
+AuthorsGroup:Button("Скопировать ТГ", function() setclipboard("https://t.me/hatanyana") Obsidian:Notify("Nyan", "TG скопирован!") end)
+AuthorsGroup:Button("Скопировать ДС", function() setclipboard("https://discord.gg/7bxaxuRjbg") Obsidian:Notify("Nyan", "Discord скопирован!") end)
 
--- ВКЛАДКА INFO С ССЫЛКАМИ
-InfoTab:CreateParagraph({ 
-    Title = "Информация", 
-    Content = "Автор: jeffkiller231451\nКодер: Fox\nСаппорт: liloxa58\n\nТГ: https://t.me/hatanyana\nДС: https://discord.gg/7bxaxuRjbg" 
-})
-InfoTab:CreateButton({ Name = "Скопировать ТГ", Callback = function() setclipboard("https://t.me/hatanyana") Rayfield:Notify({Title = "Nyan", Content = "TG скопирован!", Duration = 5}) end })
-InfoTab:CreateButton({ Name = "Скопировать ДС", Callback = function() setclipboard("https://discord.gg/7bxaxuRjbg") Rayfield:Notify({Title = "Nyan", Content = "Discord скопирован!", Duration = 5}) end })
+-- Аддоны
+local AddonsGroup = AddonsTab:Group("Аддоны")
+AddonsGroup:Paragraph("Тут будут дополнительные модули. Пока пусто, блять.")
 
+-- ==== HEARTBEAT ДЛЯ WALKSPEED ====
 RunService.Heartbeat:Connect(function()
     local char = LocalPlayer.Character
     if char and char:FindFirstChild("Humanoid") then char.Humanoid.WalkSpeed = State.WalkSpeed end
 end)
 
-Rayfield:Notify({ Title = "Nyan Script", Content = "Загружено! ДС и ТГ в Info.", Duration = 5 })
+-- ==== УВЕДОМЛЕНИЕ О ЗАГРУЗКЕ ====
+Obsidian:Notify("Nyan Script", "Загружено! ДС и ТГ в Info.")
