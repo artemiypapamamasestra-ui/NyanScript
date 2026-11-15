@@ -1,10 +1,11 @@
 --[[
-    [FPS] Flick — NYAN SCRIPT (Karpware Style + Always-On ESP)
+    [FPS] Flick — NYAN SCRIPT (Karpware Style + Info)
     Автор: jeffkiller231451
     Главный кодер: Fox
     Моральная поддержка: liloxa58
 ]]
 
+-- ==== ЗАГРУЗКА FLUENT ====
 local Fluent = loadstring(game:HttpGet("https://github.com/dawid-scripts/Fluent/releases/latest/download/main.lua"))()
 
 local Window = Fluent:CreateWindow({
@@ -17,12 +18,15 @@ local Window = Fluent:CreateWindow({
     MinimizeKey = Enum.KeyCode.RightShift
 })
 
+-- ==== ВКЛАДКИ ====
 local Tabs = {
     Ragebot = Window:AddTab({ Title = "Ragebot", Icon = "crosshair" }),
     Visuals = Window:AddTab({ Title = "Visuals", Icon = "eye" }),
     Misc = Window:AddTab({ Title = "Miscellaneous", Icon = "settings" }),
+    Info = Window:AddTab({ Title = "Info", Icon = "info" }),
 }
 
+-- ==== СОСТОЯНИЕ ====
 local State = {
     AimBot = false, TriggerBot = false, TriggerDelay = 0.1, FOV = 250, MaxDistance = 150,
     WalkSpeed = 16, CustomFOV = false, FOVValue = 70,
@@ -173,7 +177,6 @@ end
 Players.PlayerRemoving:Connect(function(player) removeESP(player) end)
 
 RenderStepped:Connect(function()
-    -- УБРАЛ ПРОВЕРКУ State.MenuOpen, ESP РАБОТАЕТ ВСЕГДА
     for _, p in ipairs(Players:GetPlayers()) do
         if p ~= LocalPlayer then
             if not espCache[p] then createESP(p) end
@@ -272,9 +275,29 @@ Tabs.Misc:AddParagraph({ Title = "Miscellaneous", Content = "Хоткей: F (Wa
 Tabs.Misc:AddToggle("Crosshair", { Title = "Crosshair", Default = true, Callback = function(v) State.Crosshair = v end })
 Tabs.Misc:AddSlider("WalkSpeed", { Title = "WalkSpeed", Min = 16, Max = 100, Default = 16, Rounding = 0, Callback = function(v) State.WalkSpeed = v end })
 
+-- ==== ВКЛАДКА INFO (Ссылки и авторы) ====
+Tabs.Info:AddParagraph({ 
+    Title = "Информация", 
+    Content = "Автор: jeffkiller231451\nКодер: Fox\nСаппорт: liloxa58\n\nТГ: https://t.me/hatanyana\nДС: https://discord.gg/7bxaxuRjbg" 
+})
+Tabs.Info:AddButton({ 
+    Title = "Скопировать ТГ", 
+    Callback = function() 
+        setclipboard("https://t.me/hatanyana") 
+        Fluent:Notify({ Title = "Nyan", Content = "TG скопирован!", Duration = 5 }) 
+    end 
+})
+Tabs.Info:AddButton({ 
+    Title = "Скопировать ДС", 
+    Callback = function() 
+        setclipboard("https://discord.gg/7bxaxuRjbg") 
+        Fluent:Notify({ Title = "Nyan", Content = "Discord скопирован!", Duration = 5 }) 
+    end 
+})
+
 RunService.Heartbeat:Connect(function()
     local char = LocalPlayer.Character
     if char and char:FindFirstChild("Humanoid") then char.Humanoid.WalkSpeed = State.WalkSpeed end
 end)
 
-Fluent:Notify({ Title = "Karpware Style", Content = "Скрипт загружен! ESP всегда включен.", Duration = 5 })
+Fluent:Notify({ Title = "Karpware Style", Content = "Скрипт загружен! Инфа во вкладке Info.", Duration = 5 })
