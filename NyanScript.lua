@@ -1,49 +1,38 @@
 --[[
-    [FPS] Flick — NYAN SCRIPT (MacLib UI)
+    [FPS] Flick — NYAN SCRIPT (Karpware Style on Fluent UI)
     Автор: jeffkiller231451
     Главный кодер: Fox
     Моральная поддержка: liloxa58
 ]]
 
--- ==== ЗАГРУЗКА MACLIB ====
-local MacLib = loadstring(game:HttpGet("https://raw.githubusercontent.com/1Mac10/MacLib/main/MacLib.lua"))()
+-- ==== ЗАГРУЗКА FLUENT ====
+local Fluent = loadstring(game:HttpGet("https://github.com/dawid-scripts/Fluent/releases/latest/download/main.lua"))()
 
-local Window = MacLib:CreateWindow({
-    Title = "Nyan Script | Flick",
+local Window = Fluent:CreateWindow({
+    Title = "Karpware 6.1.0 | Nyan",
     SubTitle = "by jeffkiller231451 & Fox",
     TabWidth = 160,
-    Size = UDim2.fromOffset(600, 450),
+    Size = UDim2.fromOffset(700, 500),
+    Acrylic = false,
     Theme = "Dark",
-    KeySystem = false,
+    MinimizeKey = Enum.KeyCode.RightShift
 })
 
--- ==== ВКЛАДКИ ====
-local MainTab = Window:Tab("Главная")
-local CombatTab = Window:Tab("Основные")
-local AuthorsTab = Window:Tab("Авторы")
-local SettingsTab = Window:Tab("Настройки")
-local AddonsTab = Window:Tab("Аддоны")
+local Tabs = {
+    Ragebot = Window:AddTab({ Title = "Ragebot", Icon = "crosshair" }),
+    AntiAim = Window:AddTab({ Title = "Anti Aim", Icon = "person-standing" }),
+    Visuals = Window:AddTab({ Title = "Visuals", Icon = "eye" }),
+    Skins = Window:AddTab({ Title = "Skins", Icon = "paintbrush" }),
+    Misc = Window:AddTab({ Title = "Miscellaneous", Icon = "settings" }),
+    Configs = Window:AddTab({ Title = "Configs", Icon = "save" }),
+}
 
 -- ==== СОСТОЯНИЕ ====
 local State = {
-    AimBot = false,
-    TriggerBot = false,
-    TriggerDelay = 0.1,
-    FOV = 250,
-    MaxDistance = 150,
-    WalkSpeed = 16,
-    CustomFOV = false,
-    FOVValue = 70,
-    ESP = false,
-    ESP_Box = true,
-    ESP_Skeleton = true,
-    ESP_Health = true,
-    ESP_Name = true,
-    ESP_Tracer = true,
-    Crosshair = true,
-    ShowFOV = false,
-    BHop = false,
-    BHopSpeed = 35,
+    AimBot = false, TriggerBot = false, TriggerDelay = 0.1, FOV = 250, MaxDistance = 150,
+    WalkSpeed = 16, CustomFOV = false, FOVValue = 70,
+    ESP = false, ESP_Box = true, ESP_Skeleton = true, ESP_Health = true, ESP_Name = true, ESP_Tracer = true,
+    Crosshair = true, ShowFOV = false, BHop = false, BHopSpeed = 35,
 }
 
 local Players = game:GetService("Players")
@@ -54,30 +43,27 @@ local RenderStepped = RunService.RenderStepped
 
 -- ==== ВОДЯНОЙ ЗНАК ====
 local watermark = Drawing.new("Text")
-watermark.Text = "Nyan Script | jeffkiller231451 & Fox"
+watermark.Text = "Nyan Script | Karpware Style"
 watermark.Size = 18
 watermark.Color = Color3.fromRGB(255, 50, 50)
 watermark.Outline = true
 watermark.Position = Vector2.new(15, 15)
 watermark.Visible = true
 
--- ==== ПОИСК ЦЕЛИ ====
+-- ==== ЛОГИКА (АИМБОТ, ТРИГГЕР, ESP, BHOP) ====
 local function getClosestPlayer()
     local closest = nil
     local shortestWorldDist = State.MaxDistance 
     local center = Camera.ViewportSize / 2
     local camPos = Camera.CFrame.Position
-
     for _, p in ipairs(Players:GetPlayers()) do
         if p ~= LocalPlayer and p.Parent and p.Character and p.Character:FindFirstChild("Head") then
             local char = p.Character
             local hum = char:FindFirstChild("Humanoid")
             if not hum or hum.Health <= 0 then continue end
-            
             local head = char.Head
             local worldDist = (camPos - head.Position).Magnitude
             if worldDist > shortestWorldDist then continue end
-
             local screenPos, onScreen = Camera:WorldToViewportPoint(head.Position)
             if onScreen then
                 local screenDist = (Vector2.new(screenPos.X, screenPos.Y) - center).Magnitude
@@ -91,113 +77,58 @@ local function getClosestPlayer()
     return closest
 end
 
--- ==== ПРОВЕРКА СТЕН ====
 local function isVisible(target)
     if not target then return false end
     local camPos = Camera.CFrame.Position
     local rayParams = RaycastParams.new()
     rayParams.FilterDescendantsInstances = {LocalPlayer.Character}
     rayParams.FilterType = Enum.RaycastFilterType.Exclude
-    
     local dir = (target.Position - camPos)
     local result = workspace:Raycast(camPos, dir, rayParams)
-    
     if result and (result.Instance == target or result.Instance:IsDescendantOf(target.Parent)) then
         return true
     end
     return false
 end
 
--- ==== АИМБОТ И ТРИГГЕР ====
 local lastTriggerTime = 0
-
 RenderStepped:Connect(function()
     if not State.AimBot and not State.TriggerBot then return end
     local target = getClosestPlayer()
     if not target then return end
-    
-    if State.AimBot then
-        if mousemoverel then
-            local screenPos = Camera:WorldToViewportPoint(target.Position)
-            local center = Camera.ViewportSize / 2
-            mousemoverel(screenPos.X - center.X, screenPos.Y - center.Y)
-        end
+    if State.AimBot and mousemoverel then
+        local screenPos = Camera:WorldToViewportPoint(target.Position)
+        local center = Camera.ViewportSize / 2
+        mousemoverel(screenPos.X - center.X, screenPos.Y - center.Y)
     end
-    
-    if State.TriggerBot then
-        if isVisible(target) then
-            if tick() - lastTriggerTime >= State.TriggerDelay then
-                if mouse1click then mouse1click() end
-                lastTriggerTime = tick()
-            end
-        end
+    if State.TriggerBot and isVisible(target) and tick() - lastTriggerTime >= State.TriggerDelay then
+        if mouse1click then mouse1click() end
+        lastTriggerTime = tick()
     end
 end)
 
--- ==== FOV CHANGER ====
 RenderStepped:Connect(function()
-    if State.CustomFOV then
-        if Camera.FieldOfView ~= State.FOVValue then
-            Camera.FieldOfView = State.FOVValue
-        end
-    end
+    if State.CustomFOV and Camera.FieldOfView ~= State.FOVValue then Camera.FieldOfView = State.FOVValue end
 end)
 
--- ==== BUNNY HOP ====
 local lastJumpTime = 0
-
 RenderStepped:Connect(function()
     if not State.BHop then return end
-    
     local char = LocalPlayer.Character
     if not char then return end
-    
     local hum = char:FindFirstChild("Humanoid")
     local root = char:FindFirstChild("HumanoidRootPart")
-    
-    if hum and root then
-        if hum.FloorMaterial ~= Enum.Material.Air then
-            local moveDir = hum.MoveDirection
-            if moveDir.Magnitude > 0 then
-                if tick() - lastJumpTime > 0.1 then
-                    root.Velocity = Vector3.new(moveDir.X * State.BHopSpeed, root.Velocity.Y + 50, moveDir.Z * State.BHopSpeed)
-                    hum.Jump = true
-                    lastJumpTime = tick()
-                end
-            end
+    if hum and root and hum.FloorMaterial ~= Enum.Material.Air then
+        local moveDir = hum.MoveDirection
+        if moveDir.Magnitude > 0 and tick() - lastJumpTime > 0.1 then
+            root.Velocity = Vector3.new(moveDir.X * State.BHopSpeed, root.Velocity.Y + 50, moveDir.Z * State.BHopSpeed)
+            hum.Jump = true
+            lastJumpTime = tick()
         end
     end
 end)
 
--- ==== ПРИЦЕЛ ====
-local crosshairDot = Drawing.new("Circle")
-crosshairDot.Thickness = 2
-crosshairDot.Radius = 3
-crosshairDot.Filled = true
-crosshairDot.Visible = false
-
-local fovCircle = Drawing.new("Circle")
-fovCircle.Thickness = 1
-fovCircle.Filled = false
-fovCircle.Visible = false
-
-RenderStepped:Connect(function()
-    local center = Camera.ViewportSize / 2
-    crosshairDot.Color = Color3.fromRGB(255, 50, 50)
-    if State.Crosshair then
-        crosshairDot.Position = center; crosshairDot.Visible = true
-    else
-        crosshairDot.Visible = false
-    end
-
-    if State.ShowFOV then
-        fovCircle.Position = center; fovCircle.Radius = State.FOV; fovCircle.Visible = true
-    else
-        fovCircle.Visible = false
-    end
-end)
-
--- ==== ESP ====
+-- ESP
 local espCache = {}
 local function createESP(player)
     if espCache[player] then return end
@@ -235,24 +166,18 @@ RenderStepped:Connect(function()
         if p ~= LocalPlayer then
             if not espCache[p] then createESP(p) end
             local d = espCache[p]
-            
             if not State.ESP or not p.Parent or not p.Character or not p.Character:FindFirstChild("HumanoidRootPart") then 
                 hideESP(d) continue 
             end
-            
             local char = p.Character; local hum = char:FindFirstChild("Humanoid"); local root = char.HumanoidRootPart
-            
-            if not hum or hum.Health <= 0 then hideESP(d) continue end
-            if not root.Position or root.Position.Magnitude == 0 then hideESP(d) continue end
-            
+            if not hum or hum.Health <= 0 or not root.Position then hideESP(d) continue end
             local screenPos, onScreen = Camera:WorldToViewportPoint(root.Position)
             if onScreen then
                 local dist = (Camera.CFrame.Position - root.Position).Magnitude
                 local boxSize = Vector2.new(2000 / dist, 3000 / dist)
                 local boxPos = Vector2.new(screenPos.X - boxSize.X / 2, screenPos.Y - boxSize.Y / 2)
-                
                 if State.ESP_Box then d.box.Size = boxSize; d.box.Position = boxPos; d.box.Visible = true else d.box.Visible = false end
-                if State.ESP_Name then d.name.Text = p.Name .. " [" .. math.floor(dist) .. "m]"; d.name.Position = Vector2.new(screenPos.X, boxPos.Y - 18); d.name.Visible = true else d.name.Visible = false end
+                if State.ESP_Name then d.name.Text = p.Name; d.name.Position = Vector2.new(screenPos.X, boxPos.Y - 18); d.name.Visible = true else d.name.Visible = false end
                 if State.ESP_Tracer then d.tracer.From = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y); d.tracer.To = Vector2.new(screenPos.X, screenPos.Y); d.tracer.Visible = true else d.tracer.Visible = false end
                 if State.ESP_Health then
                     local hPercent = hum.Health / hum.MaxHealth; local hHeight = boxSize.Y * hPercent
@@ -274,50 +199,37 @@ RenderStepped:Connect(function()
     end
 end)
 
--- ==== UI ====
+-- ==== UI (СТИЛЬ KARPWARE) ====
+Tabs.Ragebot:AddParagraph({ Title = "Ragebot Settings", Content = "Настройки для ебашинга врагов" })
+Tabs.Ragebot:AddToggle("AimBot", { Title = "Master switch", Default = false, Callback = function(v) State.AimBot = v end })
+Tabs.Ragebot:AddToggle("TriggerBot", { Title = "Silent aim", Default = false, Callback = function(v) State.TriggerBot = v end })
+Tabs.Ragebot:AddSlider("FOV", { Title = "Field of view", Min = 50, Max = 800, Default = 250, Rounding = 0, Callback = function(v) State.FOV = v end })
+Tabs.Ragebot:AddSlider("MaxDist", { Title = "Max distance", Min = 10, Max = 1000, Default = 150, Rounding = 0, Callback = function(v) State.MaxDistance = v end })
+Tabs.Ragebot:AddToggle("BHop", { Title = "Auto bunnyhop", Default = false, Callback = function(v) State.BHop = v end })
+Tabs.Ragebot:AddSlider("BHopSpeed", { Title = "BHop speed", Min = 16, Max = 100, Default = 35, Rounding = 0, Callback = function(v) State.BHopSpeed = v end })
 
--- Главная
-MainTab:Paragraph("Список изменений", "03.10.2026\n[+] Added Anti Noise\n[+] Added Anti Crusher\n[+] Added Destroy Noise TV\n[+] Added trash Esp\n[+] Added more things on 'Ignore list'\n[+] Added auto parry Timoty\n[+] DO NOT ACTIVE THIS (beta)\n[+] Added Enable move tabs or no\n[+] Added Notify Structures")
+Tabs.Visuals:AddParagraph({ Title = "Visuals", Content = "ESP и прочее" })
+Tabs.Visuals:AddToggle("ESP", { Title = "ESP", Default = false, Callback = function(v) State.ESP = v end })
+Tabs.Visuals:AddToggle("ESPBox", { Title = "Box", Default = true, Callback = function(v) State.ESP_Box = v end })
+Tabs.Visuals:AddToggle("ESPSkeleton", { Title = "Skeleton", Default = true, Callback = function(v) State.ESP_Skeleton = v end })
+Tabs.Visuals:AddToggle("ESPHealth", { Title = "Health", Default = true, Callback = function(v) State.ESP_Health = v end })
+Tabs.Visuals:AddToggle("ESPName", { Title = "Name", Default = true, Callback = function(v) State.ESP_Name = v end })
+Tabs.Visuals:AddToggle("ESPTracer", { Title = "Tracer", Default = true, Callback = function(v) State.ESP_Tracer = v end })
 
--- Основные
-CombatTab:Toggle("AimBot", false, function(v) State.AimBot = v end)
-CombatTab:Toggle("TriggerBot", false, function(v) State.TriggerBot = v end)
-CombatTab:Slider("Trigger Delay", 0.01, 1, 0.1, function(v) State.TriggerDelay = v end)
-CombatTab:Slider("Aim FOV", 50, 800, 250, function(v) State.FOV = v end)
-CombatTab:Slider("Max Distance", 10, 1000, 150, function(v) State.MaxDistance = v end)
-CombatTab:Toggle("BHop", false, function(v) State.BHop = v end)
-CombatTab:Slider("BHop Speed", 16, 100, 35, function(v) State.BHopSpeed = v end)
+Tabs.Misc:AddParagraph({ Title = "Miscellaneous", Content = "Всякое разное" })
+Tabs.Misc:AddToggle("CustomFOV", { Title = "Custom FOV", Default = false, Callback = function(v) State.CustomFOV = v end })
+Tabs.Misc:AddSlider("FOVValue", { Title = "FOV Value", Min = 40, Max = 120, Default = 70, Rounding = 0, Callback = function(v) State.FOVValue = v; if State.CustomFOV then Camera.FieldOfView = v end end })
+Tabs.Misc:AddToggle("Crosshair", { Title = "Crosshair", Default = true, Callback = function(v) State.Crosshair = v end })
+Tabs.Misc:AddToggle("ShowFOV", { Title = "Show FOV Circle", Default = false, Callback = function(v) State.ShowFOV = v end })
+Tabs.Misc:AddSlider("WalkSpeed", { Title = "WalkSpeed", Min = 16, Max = 100, Default = 16, Rounding = 0, Callback = function(v) State.WalkSpeed = v end })
 
-CombatTab:Toggle("ESP", false, function(v) State.ESP = v end)
-CombatTab:Toggle("ESP Box", true, function(v) State.ESP_Box = v end)
-CombatTab:Toggle("ESP Skeleton", true, function(v) State.ESP_Skeleton = v end)
-CombatTab:Toggle("ESP Health", true, function(v) State.ESP_Health = v end)
-CombatTab:Toggle("ESP Name", true, function(v) State.ESP_Name = v end)
-CombatTab:Toggle("ESP Tracer", true, function(v) State.ESP_Tracer = v end)
+Tabs.Configs:AddParagraph({ Title = "Info", Content = "Автор: jeffkiller231451\nКодер: Fox\nСаппорт: liloxa58\n\nТГ: https://t.me/hatanyana\nДС: https://discord.gg/7bxaxuRjbg" })
+Tabs.Configs:AddButton({ Title = "Скопировать ТГ", Callback = function() setclipboard("https://t.me/hatanyana") Fluent:Notify({ Title = "Nyan", Content = "TG скопирован!", Duration = 5 }) end })
+Tabs.Configs:AddButton({ Title = "Скопировать ДС", Callback = function() setclipboard("https://discord.gg/7bxaxuRjbg") Fluent:Notify({ Title = "Nyan", Content = "Discord скопирован!", Duration = 5 }) end })
 
--- Настройки
-SettingsTab:Toggle("Custom FOV", false, function(v) State.CustomFOV = v end)
-SettingsTab:Slider("FOV Value", 40, 120, 70, function(v) 
-    State.FOVValue = v 
-    if State.CustomFOV then Camera.FieldOfView = v end
-end)
-SettingsTab:Toggle("Crosshair", true, function(v) State.Crosshair = v end)
-SettingsTab:Toggle("Show FOV Circle", false, function(v) State.ShowFOV = v end)
-SettingsTab:Slider("WalkSpeed", 16, 100, 16, function(v) State.WalkSpeed = v end)
-
--- Авторы
-AuthorsTab:Paragraph("Информация", "Автор: jeffkiller231451\nКодер: Fox\nСаппорт: liloxa58\n\nТГ: https://t.me/hatanyana\nДС: https://discord.gg/7bxaxuRjbg")
-AuthorsTab:Button("Скопировать ТГ", function() setclipboard("https://t.me/hatanyana") MacLib:Notify("Nyan", "TG скопирован!") end)
-AuthorsTab:Button("Скопировать ДС", function() setclipboard("https://discord.gg/7bxaxuRjbg") MacLib:Notify("Nyan", "Discord скопирован!") end)
-
--- Аддоны
-AddonsTab:Paragraph("Аддоны", "Тут будут дополнительные модули. Пока пусто, блять.")
-
--- ==== HEARTBEAT ДЛЯ WALKSPEED ====
 RunService.Heartbeat:Connect(function()
     local char = LocalPlayer.Character
     if char and char:FindFirstChild("Humanoid") then char.Humanoid.WalkSpeed = State.WalkSpeed end
 end)
 
--- ==== УВЕДОМЛЕНИЕ О ЗАГРУЗКЕ ====
-MacLib:Notify("Nyan Script", "Загружено! ДС и ТГ в Info.")
+Fluent:Notify({ Title = "Karpware Style", Content = "Загружено! ДС и ТГ в Configs.", Duration = 5 })
