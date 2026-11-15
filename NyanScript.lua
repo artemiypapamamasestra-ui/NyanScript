@@ -1,11 +1,10 @@
 --[[
-    [FPS] Flick — NYAN SCRIPT (Karpware Style on Fluent UI)
+    [FPS] Flick — NYAN SCRIPT (Karpware Style + Always-On ESP)
     Автор: jeffkiller231451
     Главный кодер: Fox
     Моральная поддержка: liloxa58
 ]]
 
--- ==== ЗАГРУЗКА FLUENT ====
 local Fluent = loadstring(game:HttpGet("https://github.com/dawid-scripts/Fluent/releases/latest/download/main.lua"))()
 
 local Window = Fluent:CreateWindow({
@@ -20,26 +19,26 @@ local Window = Fluent:CreateWindow({
 
 local Tabs = {
     Ragebot = Window:AddTab({ Title = "Ragebot", Icon = "crosshair" }),
-    AntiAim = Window:AddTab({ Title = "Anti Aim", Icon = "person-standing" }),
     Visuals = Window:AddTab({ Title = "Visuals", Icon = "eye" }),
-    Skins = Window:AddTab({ Title = "Skins", Icon = "paintbrush" }),
     Misc = Window:AddTab({ Title = "Miscellaneous", Icon = "settings" }),
-    Configs = Window:AddTab({ Title = "Configs", Icon = "save" }),
 }
 
--- ==== СОСТОЯНИЕ ====
 local State = {
     AimBot = false, TriggerBot = false, TriggerDelay = 0.1, FOV = 250, MaxDistance = 150,
     WalkSpeed = 16, CustomFOV = false, FOVValue = 70,
     ESP = false, ESP_Box = true, ESP_Skeleton = true, ESP_Health = true, ESP_Name = true, ESP_Tracer = true,
     Crosshair = true, ShowFOV = false, BHop = false, BHopSpeed = 35,
+    AimMethod = "Mouse",
 }
 
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
 local LocalPlayer = Players.LocalPlayer
 local Camera = workspace.CurrentCamera
 local RenderStepped = RunService.RenderStepped
+
+local Toggles = {}
 
 -- ==== ВОДЯНОЙ ЗНАК ====
 local watermark = Drawing.new("Text")
@@ -50,26 +49,32 @@ watermark.Outline = true
 watermark.Position = Vector2.new(15, 15)
 watermark.Visible = true
 
--- ==== ЛОГИКА (АИМБОТ, ТРИГГЕР, ESP, BHOP) ====
+local hotkeyInfo = Drawing.new("Text")
+hotkeyInfo.Text = "[HOTKEYS] Z: AimBot | X: Trigger | C: ESP | V: BHop | F: WalkSpeed | G: Aim Method"
+hotkeyInfo.Size = 16
+hotkeyInfo.Color = Color3.fromRGB(255, 255, 255)
+hotkeyInfo.Outline = true
+hotkeyInfo.Position = Vector2.new(15, 35)
+hotkeyInfo.Visible = true
+
+-- ==== ЛОГИКА ЧИТОВ ====
 local function getClosestPlayer()
     local closest = nil
     local shortestWorldDist = State.MaxDistance 
     local center = Camera.ViewportSize / 2
     local camPos = Camera.CFrame.Position
     for _, p in ipairs(Players:GetPlayers()) do
-        if p ~= LocalPlayer and p.Parent and p.Character and p.Character:FindFirstChild("Head") then
-            local char = p.Character
-            local hum = char:FindFirstChild("Humanoid")
-            if not hum or hum.Health <= 0 then continue end
-            local head = char.Head
+        if p ~= LocalPlayer and p.Character and p.Character:FindFirstChild("Head") and p.Character:FindFirstChild("Humanoid") and p.Character.Humanoid.Health > 0 then
+            local head = p.Character.Head
             local worldDist = (camPos - head.Position).Magnitude
-            if worldDist > shortestWorldDist then continue end
-            local screenPos, onScreen = Camera:WorldToViewportPoint(head.Position)
-            if onScreen then
-                local screenDist = (Vector2.new(screenPos.X, screenPos.Y) - center).Magnitude
-                if screenDist < State.FOV then
-                    shortestWorldDist = worldDist
-                    closest = head
+            if worldDist <= shortestWorldDist then
+                local screenPos, onScreen = Camera:WorldToViewportPoint(head.Position)
+                if onScreen then
+                    local screenDist = (Vector2.new(screenPos.X, screenPos.Y) - center).Magnitude
+                    if screenDist < State.FOV then
+                        shortestWorldDist = worldDist
+                        closest = head
+                    end
                 end
             end
         end
@@ -96,11 +101,17 @@ RenderStepped:Connect(function()
     if not State.AimBot and not State.TriggerBot then return end
     local target = getClosestPlayer()
     if not target then return end
-    if State.AimBot and mousemoverel then
-        local screenPos = Camera:WorldToViewportPoint(target.Position)
-        local center = Camera.ViewportSize / 2
-        mousemoverel(screenPos.X - center.X, screenPos.Y - center.Y)
+
+    if State.AimBot then
+        if State.AimMethod == "Mouse" and mousemoverel then
+            local screenPos = Camera:WorldToViewportPoint(target.Position)
+            local center = Camera.ViewportSize / 2
+            mousemoverel(screenPos.X - center.X, screenPos.Y - center.Y)
+        elseif State.AimMethod == "Camera" then
+            Camera.CFrame = CFrame.lookAt(Camera.CFrame.Position, target.Position)
+        end
     end
+
     if State.TriggerBot and isVisible(target) and tick() - lastTriggerTime >= State.TriggerDelay then
         if mouse1click then mouse1click() end
         lastTriggerTime = tick()
@@ -128,7 +139,7 @@ RenderStepped:Connect(function()
     end
 end)
 
--- ESP
+-- ==== ESP ====
 local espCache = {}
 local function createESP(player)
     if espCache[player] then return end
@@ -162,6 +173,7 @@ end
 Players.PlayerRemoving:Connect(function(player) removeESP(player) end)
 
 RenderStepped:Connect(function()
+    -- УБРАЛ ПРОВЕРКУ State.MenuOpen, ESP РАБОТАЕТ ВСЕГДА
     for _, p in ipairs(Players:GetPlayers()) do
         if p ~= LocalPlayer then
             if not espCache[p] then createESP(p) end
@@ -199,37 +211,70 @@ RenderStepped:Connect(function()
     end
 end)
 
--- ==== UI (СТИЛЬ KARPWARE) ====
-Tabs.Ragebot:AddParagraph({ Title = "Ragebot Settings", Content = "Настройки для ебашинга врагов" })
-Tabs.Ragebot:AddToggle("AimBot", { Title = "Master switch", Default = false, Callback = function(v) State.AimBot = v end })
-Tabs.Ragebot:AddToggle("TriggerBot", { Title = "Silent aim", Default = false, Callback = function(v) State.TriggerBot = v end })
+-- ==== ХОТКЕИ ====
+UserInputService.InputBegan:Connect(function(input, gameProcessed)
+    if gameProcessed then return end
+
+    if input.KeyCode == Enum.KeyCode.Z then
+        State.AimBot = not State.AimBot
+        if Toggles.AimBot then Toggles.AimBot:Set(State.AimBot) end
+        Fluent:Notify({ Title = "AimBot", Content = State.AimBot and "Включен" or "Выключен", Duration = 2 })
+    end
+
+    if input.KeyCode == Enum.KeyCode.X then
+        State.TriggerBot = not State.TriggerBot
+        if Toggles.TriggerBot then Toggles.TriggerBot:Set(State.TriggerBot) end
+        Fluent:Notify({ Title = "TriggerBot", Content = State.TriggerBot and "Включен" or "Выключен", Duration = 2 })
+    end
+
+    if input.KeyCode == Enum.KeyCode.C then
+        State.ESP = not State.ESP
+        if Toggles.ESP then Toggles.ESP:Set(State.ESP) end
+        Fluent:Notify({ Title = "ESP", Content = State.ESP and "Включен" or "Выключен", Duration = 2 })
+    end
+
+    if input.KeyCode == Enum.KeyCode.V then
+        State.BHop = not State.BHop
+        if Toggles.BHop then Toggles.BHop:Set(State.BHop) end
+        Fluent:Notify({ Title = "BHop", Content = State.BHop and "Включен" or "Выключен", Duration = 2 })
+    end
+
+    if input.KeyCode == Enum.KeyCode.F then
+        if State.WalkSpeed == 16 then State.WalkSpeed = 50
+        elseif State.WalkSpeed == 50 then State.WalkSpeed = 100
+        else State.WalkSpeed = 16 end
+        Fluent:Notify({ Title = "WalkSpeed", Content = "Скорость: " .. State.WalkSpeed, Duration = 2 })
+    end
+
+    if input.KeyCode == Enum.KeyCode.G then
+        State.AimMethod = (State.AimMethod == "Mouse") and "Camera" or "Mouse"
+        Fluent:Notify({ Title = "Aim Method", Content = "Метод: " .. State.AimMethod, Duration = 2 })
+    end
+end)
+
+-- ==== UI ====
+Tabs.Ragebot:AddParagraph({ Title = "Ragebot Settings", Content = "Хоткеи: Z (AimBot) | X (Trigger) | G (Aim Method)" })
+Toggles.AimBot = Tabs.Ragebot:AddToggle("AimBot", { Title = "AimBot", Default = false, Callback = function(v) State.AimBot = v end })
+Toggles.TriggerBot = Tabs.Ragebot:AddToggle("TriggerBot", { Title = "TriggerBot", Default = false, Callback = function(v) State.TriggerBot = v end })
 Tabs.Ragebot:AddSlider("FOV", { Title = "Field of view", Min = 50, Max = 800, Default = 250, Rounding = 0, Callback = function(v) State.FOV = v end })
 Tabs.Ragebot:AddSlider("MaxDist", { Title = "Max distance", Min = 10, Max = 1000, Default = 150, Rounding = 0, Callback = function(v) State.MaxDistance = v end })
-Tabs.Ragebot:AddToggle("BHop", { Title = "Auto bunnyhop", Default = false, Callback = function(v) State.BHop = v end })
-Tabs.Ragebot:AddSlider("BHopSpeed", { Title = "BHop speed", Min = 16, Max = 100, Default = 35, Rounding = 0, Callback = function(v) State.BHopSpeed = v end })
 
-Tabs.Visuals:AddParagraph({ Title = "Visuals", Content = "ESP и прочее" })
-Tabs.Visuals:AddToggle("ESP", { Title = "ESP", Default = false, Callback = function(v) State.ESP = v end })
+Tabs.Visuals:AddParagraph({ Title = "Visuals", Content = "Хоткей: C (ESP) | V (BHop)" })
+Toggles.ESP = Tabs.Visuals:AddToggle("ESP", { Title = "ESP", Default = false, Callback = function(v) State.ESP = v end })
 Tabs.Visuals:AddToggle("ESPBox", { Title = "Box", Default = true, Callback = function(v) State.ESP_Box = v end })
 Tabs.Visuals:AddToggle("ESPSkeleton", { Title = "Skeleton", Default = true, Callback = function(v) State.ESP_Skeleton = v end })
 Tabs.Visuals:AddToggle("ESPHealth", { Title = "Health", Default = true, Callback = function(v) State.ESP_Health = v end })
 Tabs.Visuals:AddToggle("ESPName", { Title = "Name", Default = true, Callback = function(v) State.ESP_Name = v end })
 Tabs.Visuals:AddToggle("ESPTracer", { Title = "Tracer", Default = true, Callback = function(v) State.ESP_Tracer = v end })
+Toggles.BHop = Tabs.Visuals:AddToggle("BHop", { Title = "BHop", Default = false, Callback = function(v) State.BHop = v end })
 
-Tabs.Misc:AddParagraph({ Title = "Miscellaneous", Content = "Всякое разное" })
-Tabs.Misc:AddToggle("CustomFOV", { Title = "Custom FOV", Default = false, Callback = function(v) State.CustomFOV = v end })
-Tabs.Misc:AddSlider("FOVValue", { Title = "FOV Value", Min = 40, Max = 120, Default = 70, Rounding = 0, Callback = function(v) State.FOVValue = v; if State.CustomFOV then Camera.FieldOfView = v end end })
+Tabs.Misc:AddParagraph({ Title = "Miscellaneous", Content = "Хоткей: F (WalkSpeed Cycle) | G (Aim Method)" })
 Tabs.Misc:AddToggle("Crosshair", { Title = "Crosshair", Default = true, Callback = function(v) State.Crosshair = v end })
-Tabs.Misc:AddToggle("ShowFOV", { Title = "Show FOV Circle", Default = false, Callback = function(v) State.ShowFOV = v end })
 Tabs.Misc:AddSlider("WalkSpeed", { Title = "WalkSpeed", Min = 16, Max = 100, Default = 16, Rounding = 0, Callback = function(v) State.WalkSpeed = v end })
-
-Tabs.Configs:AddParagraph({ Title = "Info", Content = "Автор: jeffkiller231451\nКодер: Fox\nСаппорт: liloxa58\n\nТГ: https://t.me/hatanyana\nДС: https://discord.gg/7bxaxuRjbg" })
-Tabs.Configs:AddButton({ Title = "Скопировать ТГ", Callback = function() setclipboard("https://t.me/hatanyana") Fluent:Notify({ Title = "Nyan", Content = "TG скопирован!", Duration = 5 }) end })
-Tabs.Configs:AddButton({ Title = "Скопировать ДС", Callback = function() setclipboard("https://discord.gg/7bxaxuRjbg") Fluent:Notify({ Title = "Nyan", Content = "Discord скопирован!", Duration = 5 }) end })
 
 RunService.Heartbeat:Connect(function()
     local char = LocalPlayer.Character
     if char and char:FindFirstChild("Humanoid") then char.Humanoid.WalkSpeed = State.WalkSpeed end
 end)
 
-Fluent:Notify({ Title = "Karpware Style", Content = "Загружено! ДС и ТГ в Configs.", Duration = 5 })
+Fluent:Notify({ Title = "Karpware Style", Content = "Скрипт загружен! ESP всегда включен.", Duration = 5 })
