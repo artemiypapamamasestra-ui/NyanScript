@@ -1,31 +1,28 @@
 --[[
-    [FPS] Flick — NYAN SCRIPT (Fluent UI)
+    [FPS] Flick — NYAN SCRIPT (MacLib UI)
     Автор: jeffkiller231451
     Главный кодер: Fox
     Моральная поддержка: liloxa58
 ]]
 
-local Fluent = loadstring(game:HttpGet("https://github.com/dawid-scripts/Fluent/releases/latest/download/main.lua"))()
-local SaveManager = loadstring(game:HttpGet("https://raw.githubusercontent.com/dawid-scripts/Fluent/master/Addons/SaveManager.lua"))()
-local InterfaceManager = loadstring(game:HttpGet("https://raw.githubusercontent.com/dawid-scripts/Fluent/master/Addons/InterfaceManager.lua"))()
+-- ==== ЗАГРУЗКА MACLIB ====
+local MacLib = loadstring(game:HttpGet("https://raw.githubusercontent.com/1Mac10/MacLib/main/MacLib.lua"))()
 
-local Window = Fluent:CreateWindow({
+local Window = MacLib:CreateWindow({
     Title = "Nyan Script | Flick",
     SubTitle = "by jeffkiller231451 & Fox",
     TabWidth = 160,
-    Size = UDim2.fromOffset(580, 460),
-    Acrylic = true, -- The blur may be detectable, toggle this off if you have issues.
+    Size = UDim2.fromOffset(600, 450),
     Theme = "Dark",
-    MinimizeKey = Enum.KeyCode.RightShift
+    KeySystem = false,
 })
 
-local Tabs = {
-    Main = Window:AddTab({ Title = "Главная", Icon = "home" }),
-    Combat = Window:AddTab({ Title = "Основные", Icon = "sword" }),
-    Authors = Window:AddTab({ Title = "Авторы", Icon = "users" }),
-    Settings = Window:AddTab({ Title = "Настройки", Icon = "settings" }),
-    Addons = Window:AddTab({ Title = "Аддоны", Icon = "plus" }),
-}
+-- ==== ВКЛАДКИ ====
+local MainTab = Window:Tab("Главная")
+local CombatTab = Window:Tab("Основные")
+local AuthorsTab = Window:Tab("Авторы")
+local SettingsTab = Window:Tab("Настройки")
+local AddonsTab = Window:Tab("Аддоны")
 
 -- ==== СОСТОЯНИЕ ====
 local State = {
@@ -280,50 +277,41 @@ end)
 -- ==== UI ====
 
 -- Главная
-Tabs.Main:AddParagraph({
-    Title = "Список изменений",
-    Content = "03.10.2026\n[+] Added Anti Noise\n[+] Added Anti Crusher\n[+] Added Destroy Noise TV\n[+] Added trash Esp\n[+] Added more things on 'Ignore list'\n[+] Added auto parry Timoty\n[+] DO NOT ACTIVE THIS (beta)\n[+] Added Enable move tabs or no\n[+] Added Notify Structures"
-})
+MainTab:Paragraph("Список изменений", "03.10.2026\n[+] Added Anti Noise\n[+] Added Anti Crusher\n[+] Added Destroy Noise TV\n[+] Added trash Esp\n[+] Added more things on 'Ignore list'\n[+] Added auto parry Timoty\n[+] DO NOT ACTIVE THIS (beta)\n[+] Added Enable move tabs or no\n[+] Added Notify Structures")
 
--- Основные (Combat + ESP)
-Tabs.Combat:AddToggle("AimBot", { Title = "AimBot", Default = false, Callback = function(v) State.AimBot = v end })
-Tabs.Combat:AddToggle("TriggerBot", { Title = "TriggerBot", Default = false, Callback = function(v) State.TriggerBot = v end })
-Tabs.Combat:AddSlider("TriggerDelay", { Title = "Trigger Delay", Min = 0.01, Max = 1, Default = 0.1, Rounding = 2, Callback = function(v) State.TriggerDelay = v end })
-Tabs.Combat:AddSlider("FOV", { Title = "Aim FOV", Min = 50, Max = 800, Default = 250, Rounding = 0, Callback = function(v) State.FOV = v end })
-Tabs.Combat:AddSlider("MaxDist", { Title = "Max Distance", Min = 10, Max = 1000, Default = 150, Rounding = 0, Callback = function(v) State.MaxDistance = v end })
-Tabs.Combat:AddToggle("BHop", { Title = "BHop", Default = false, Callback = function(v) State.BHop = v end })
-Tabs.Combat:AddSlider("BHopSpeed", { Title = "BHop Speed", Min = 16, Max = 100, Default = 35, Rounding = 0, Callback = function(v) State.BHopSpeed = v end })
+-- Основные
+CombatTab:Toggle("AimBot", false, function(v) State.AimBot = v end)
+CombatTab:Toggle("TriggerBot", false, function(v) State.TriggerBot = v end)
+CombatTab:Slider("Trigger Delay", 0.01, 1, 0.1, function(v) State.TriggerDelay = v end)
+CombatTab:Slider("Aim FOV", 50, 800, 250, function(v) State.FOV = v end)
+CombatTab:Slider("Max Distance", 10, 1000, 150, function(v) State.MaxDistance = v end)
+CombatTab:Toggle("BHop", false, function(v) State.BHop = v end)
+CombatTab:Slider("BHop Speed", 16, 100, 35, function(v) State.BHopSpeed = v end)
 
-Tabs.Combat:AddToggle("ESP", { Title = "ESP", Default = false, Callback = function(v) State.ESP = v end })
-Tabs.Combat:AddToggle("ESPBox", { Title = "ESP Box", Default = true, Callback = function(v) State.ESP_Box = v end })
-Tabs.Combat:AddToggle("ESPSkeleton", { Title = "ESP Skeleton", Default = true, Callback = function(v) State.ESP_Skeleton = v end })
-Tabs.Combat:AddToggle("ESPHealth", { Title = "ESP Health", Default = true, Callback = function(v) State.ESP_Health = v end })
-Tabs.Combat:AddToggle("ESPName", { Title = "ESP Name", Default = true, Callback = function(v) State.ESP_Name = v end })
-Tabs.Combat:AddToggle("ESPTracer", { Title = "ESP Tracer", Default = true, Callback = function(v) State.ESP_Tracer = v end })
+CombatTab:Toggle("ESP", false, function(v) State.ESP = v end)
+CombatTab:Toggle("ESP Box", true, function(v) State.ESP_Box = v end)
+CombatTab:Toggle("ESP Skeleton", true, function(v) State.ESP_Skeleton = v end)
+CombatTab:Toggle("ESP Health", true, function(v) State.ESP_Health = v end)
+CombatTab:Toggle("ESP Name", true, function(v) State.ESP_Name = v end)
+CombatTab:Toggle("ESP Tracer", true, function(v) State.ESP_Tracer = v end)
 
--- Настройки (Visuals)
-Tabs.Settings:AddToggle("CustomFOV", { Title = "Custom FOV", Default = false, Callback = function(v) State.CustomFOV = v end })
-Tabs.Settings:AddSlider("FOVValue", { Title = "FOV Value", Min = 40, Max = 120, Default = 70, Rounding = 0, Callback = function(v) 
+-- Настройки
+SettingsTab:Toggle("Custom FOV", false, function(v) State.CustomFOV = v end)
+SettingsTab:Slider("FOV Value", 40, 120, 70, function(v) 
     State.FOVValue = v 
     if State.CustomFOV then Camera.FieldOfView = v end
-end })
-Tabs.Settings:AddToggle("Crosshair", { Title = "Crosshair", Default = true, Callback = function(v) State.Crosshair = v end })
-Tabs.Settings:AddToggle("ShowFOV", { Title = "Show FOV Circle", Default = false, Callback = function(v) State.ShowFOV = v end })
-Tabs.Settings:AddSlider("WalkSpeed", { Title = "WalkSpeed", Min = 16, Max = 100, Default = 16, Rounding = 0, Callback = function(v) State.WalkSpeed = v end })
+end)
+SettingsTab:Toggle("Crosshair", true, function(v) State.Crosshair = v end)
+SettingsTab:Toggle("Show FOV Circle", false, function(v) State.ShowFOV = v end)
+SettingsTab:Slider("WalkSpeed", 16, 100, 16, function(v) State.WalkSpeed = v end)
 
 -- Авторы
-Tabs.Authors:AddParagraph({
-    Title = "Информация",
-    Content = "Автор: jeffkiller231451\nКодер: Fox\nСаппорт: liloxa58\n\nТГ: https://t.me/hatanyana\nДС: https://discord.gg/7bxaxuRjbg"
-})
-Tabs.Authors:AddButton({ Title = "Скопировать ТГ", Callback = function() setclipboard("https://t.me/hatanyana") Fluent:Notify({ Title = "Nyan", Content = "TG скопирован!", Duration = 5 }) end })
-Tabs.Authors:AddButton({ Title = "Скопировать ДС", Callback = function() setclipboard("https://discord.gg/7bxaxuRjbg") Fluent:Notify({ Title = "Nyan", Content = "Discord скопирован!", Duration = 5 }) end })
+AuthorsTab:Paragraph("Информация", "Автор: jeffkiller231451\nКодер: Fox\nСаппорт: liloxa58\n\nТГ: https://t.me/hatanyana\nДС: https://discord.gg/7bxaxuRjbg")
+AuthorsTab:Button("Скопировать ТГ", function() setclipboard("https://t.me/hatanyana") MacLib:Notify("Nyan", "TG скопирован!") end)
+AuthorsTab:Button("Скопировать ДС", function() setclipboard("https://discord.gg/7bxaxuRjbg") MacLib:Notify("Nyan", "Discord скопирован!") end)
 
 -- Аддоны
-Tabs.Addons:AddParagraph({
-    Title = "Аддоны",
-    Content = "Тут будут дополнительные модули. Пока пусто, блять."
-})
+AddonsTab:Paragraph("Аддоны", "Тут будут дополнительные модули. Пока пусто, блять.")
 
 -- ==== HEARTBEAT ДЛЯ WALKSPEED ====
 RunService.Heartbeat:Connect(function()
@@ -332,15 +320,4 @@ RunService.Heartbeat:Connect(function()
 end)
 
 -- ==== УВЕДОМЛЕНИЕ О ЗАГРУЗКЕ ====
-Fluent:Notify({ Title = "Nyan Script", Content = "Загружено! ДС и ТГ в Info.", Duration = 5 })
-
--- ==== SAVE MANAGER ====
-SaveManager:SetLibrary(Fluent)
-InterfaceManager:SetLibrary(Fluent)
-SaveManager:IgnoreThemeSettings()
-SaveManager:SetIgnoreIndexes({})
-InterfaceManager:SetFolder("NyanScript")
-SaveManager:SetFolder("NyanScript/Configs")
-SaveManager:BuildConfigSection(Tabs.Settings)
-InterfaceManager:BuildInterfaceSection(Tabs.Settings)
-SaveManager:LoadAutoloadConfig()
+MacLib:Notify("Nyan Script", "Загружено! ДС и ТГ в Info.")
